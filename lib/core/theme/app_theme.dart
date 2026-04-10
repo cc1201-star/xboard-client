@@ -66,7 +66,7 @@ class AppTheme {
           backgroundColor: primary, foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily),
+          textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -75,7 +75,7 @@ class AppTheme {
           side: BorderSide(color: primary),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily),
+          textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -117,7 +117,7 @@ class AppTheme {
           backgroundColor: primary, foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily),
+          textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
