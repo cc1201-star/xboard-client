@@ -115,7 +115,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // Check for API-level failure
       if (resData is Map && resData['data'] == null) {
-        final msg = resData['message'] as String? ?? '登录失败';
+        final msg = _extractError(resData as Map, '登录失败');
         state = state.copyWith(isLoading: false, error: msg);
         return;
       }
@@ -154,7 +154,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // Check for API-level failure
       if (resData is Map && resData['data'] == null) {
-        final msg = resData['message'] as String? ?? '注册失败';
+        final msg = _extractError(resData as Map, '注册失败');
         state = state.copyWith(isLoading: false, error: msg);
         return;
       }
