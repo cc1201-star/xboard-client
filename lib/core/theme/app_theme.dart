@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -31,7 +33,11 @@ class AppColors {
 }
 
 class AppTheme {
-  static const String fontFamily = 'Microsoft YaHei';
+  static String get fontFamily {
+    if (kIsWeb) return 'Microsoft YaHei';
+    if (Platform.isMacOS || Platform.isIOS) return 'PingFang SC';
+    return 'Microsoft YaHei';
+  }
 
   /// Create light theme with dynamic primary color (matching sidebar_color)
   static ThemeData lightThemeWith(Color primary) {
