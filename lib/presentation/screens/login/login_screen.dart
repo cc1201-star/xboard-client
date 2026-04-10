@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xboard_client/core/theme/app_theme.dart';
 import 'package:xboard_client/core/constants/app_constants.dart';
+import 'package:xboard_client/core/utils/platform_utils.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
+import 'package:xboard_client/presentation/widgets/custom_title_bar.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -115,12 +117,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isWide = size.width > 768;
-    return Scaffold(body: SizedBox.expand(
-      child: AnimatedBuilder(animation: _anim, builder: (context, _) {
+    return Scaffold(body: Column(children: [
+      if (isDesktopPlatform) const CustomTitleBar(),
+      Expanded(child: AnimatedBuilder(animation: _anim, builder: (context, _) {
         final t = _anim.value;
         return isWide ? _desktop(size, t) : _mobile(size, t);
-      }),
-    ));
+      })),
+    ]));
   }
 
   // ───── Desktop: 左右穿梭 ─────

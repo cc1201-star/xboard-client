@@ -1,20 +1,23 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:xboard_client/core/theme/app_theme.dart';
+import 'package:xboard_client/presentation/providers/theme_provider.dart';
 
-class CustomTitleBar extends StatelessWidget {
+class CustomTitleBar extends ConsumerWidget {
   const CustomTitleBar({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (kIsWeb) return const SizedBox.shrink();
+
+    final sidebarColor = ref.watch(themeColorProvider);
 
     return GestureDetector(
       onPanStart: (_) => windowManager.startDragging(),
       child: Container(
         height: 32,
-        color: AppColors.sidebarDefault,
+        color: sidebarColor,
         child: Row(
           children: [
             const SizedBox(width: 76),
