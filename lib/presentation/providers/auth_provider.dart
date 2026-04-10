@@ -55,6 +55,20 @@ class AuthState {
   }
 }
 
+/// 从 API 响应中提取错误信息，优先读 errors 字段（Laravel 验证错误）
+String _extractError(Map? responseData, String fallback) {
+  if (responseData == null) return fallback;
+  // Laravel 验证错误格式: { "message": "...", "errors": { "field": ["错误信息"] } }
+  final errors = responseData['errors'];
+  if (errors is Map && errors.isNotEmpty) {
+    final firstField = errors.values.first;
+    if (firstField is List && firstField.isNotEmpty) {
+      return firstField[0] as String;
+    }
+  }
+  return responseData['message'] as String? ?? fallback;
+}
+
 class AuthNotifier extends StateNotifier<AuthState> {
   final SecureStorageService _storage;
   final Ref _ref;
@@ -119,12 +133,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         baseUrl: serverUrl,
       );
     } on DioException catch (e) {
-      // Extract error message from API response body
-      String errorMsg = '登录失败';
-      final responseData = e.response?.data;
-      if (responseData is Map) {
-        errorMsg = responseData['message'] as String? ?? errorMsg;
-      }
+      final errorMsg = _extractError(e.response?.data as Map?, '登录失败');
       state = state.copyWith(isLoading: false, error: errorMsg);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: '登录失败');
@@ -167,11 +176,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         state = state.copyWith(isLoading: false);
       }
     } on DioException catch (e) {
-      String errorMsg = '注册失败';
-      final responseData = e.response?.data;
-      if (responseData is Map) {
-        errorMsg = responseData['message'] as String? ?? errorMsg;
-      }
+      final errorMsg = _extractError(e.response?.data as Map?, '注册失败');
       state = state.copyWith(isLoading: false, error: errorMsg);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: '注册失败');
