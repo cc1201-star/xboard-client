@@ -6,7 +6,7 @@ import 'package:xboard_client/core/theme/app_theme.dart';
 import 'package:xboard_client/core/constants/app_constants.dart';
 import 'package:xboard_client/core/utils/platform_utils.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
-import 'package:xboard_client/presentation/widgets/custom_title_bar.dart';
+import 'package:window_manager/window_manager.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -117,12 +117,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isWide = size.width > 768;
-    return Scaffold(body: Column(children: [
-      if (isDesktopPlatform) const CustomTitleBar(),
-      Expanded(child: AnimatedBuilder(animation: _anim, builder: (context, _) {
-        final t = _anim.value;
-        return isWide ? _desktop(size, t) : _mobile(size, t);
-      })),
+    return Scaffold(body: Stack(children: [
+      // 登录内容
+      GestureDetector(
+        onPanStart: isDesktopPlatform ? (_) => windowManager.startDragging() : null,
+        child: AnimatedBuilder(animation: _anim, builder: (context, _) {
+          final t = _anim.value;
+          return isWide ? _desktop(size, t) : _mobile(size, t);
+        }),
+      ),
+      // 右上角浮动窗口按钮
+      if (isDesktopPlatform)
+        Positioned(
+          top: 0, right: 0,
+          child: Row(children: [
+            _WindowButton(icon: Icons.remove, onTap: () => windowManager.minimize(),
+              hoverColor: Colors.white.withValues(alpha: 0.2)),
+            _WindowButton(icon: Icons.crop_square, onTap: () async {
+              if (await windowManager.isMaximized()) { windowManager.unmaximize(); }
+              else { windowManager.maximize(); }
+            }, hoverColor: Colors.white.withValues(alpha: 0.2)),
+            _WindowButton(icon: Icons.close, onTap: () => windowManager.hide(),
+              hoverColor: const Color(0xFFE81123)),
+          ]),
+        ),
     ]));
   }
 
@@ -310,4 +328,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
           ? const Text('...', style: TextStyle(fontSize: 14, color: Colors.white))
           : Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1)),
     ));
+}
+
+class _WindowButton extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color hoverColor;
+  const _WindowButton({required this.icon, required this.onTap, required this.hoverColor});
+  @override
+  State<_WindowButton> createState() => _WindowButtonState();
+}
+
+class _WindowButtonState extends State<_WindowButton> {
+  bool _hovering = false;
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          width: 46, height: 32,
+          color: _hovering ? widget.hoverColor : Colors.transparent,
+          child: Icon(widget.icon, color: Colors.white70, size: 14),
+        ),
+      ),
+    );
+  }
 }
