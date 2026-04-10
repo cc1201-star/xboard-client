@@ -123,7 +123,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         final t = _anim.value;
         return isWide ? _desktop(size, t) : _mobile(size, t);
       }),
-      // 拖拽区域：顶部留8px给系统调整大小，底部留出按钮区域
+      // 窗口拖拽移动（中间区域）
       if (isDesktopPlatform)
         Positioned(
           top: 8, left: 8, right: 138, bottom: 8,
@@ -132,6 +132,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
             onPanStart: (_) => windowManager.startDragging(),
           ),
         ),
+      // 四周8px透明区域，让鼠标事件穿透到系统层处理伸缩
+      if (isDesktopPlatform) ...[
+        Positioned(top: 0, left: 0, right: 0, height: 8, child: const IgnorePointer()),
+        Positioned(bottom: 0, left: 0, right: 0, height: 8, child: const IgnorePointer()),
+        Positioned(top: 0, bottom: 0, left: 0, width: 8, child: const IgnorePointer()),
+        Positioned(top: 0, bottom: 0, right: 0, width: 8, child: const IgnorePointer()),
+      ],
       // 右上角浮动窗口按钮
       if (isDesktopPlatform)
         Positioned(
