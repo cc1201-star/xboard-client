@@ -175,13 +175,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   // ─── Desktop: real HTML-table-like layout ───
   Widget _desktopTable(bool isDark, Color pc) {
     return Container(
+      width: double.infinity,
       decoration: _cardDeco(isDark),
       clipBehavior: Clip.antiAlias,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 256 - 64),
-          child: Table(
+      child: Table(
             defaultVerticalAlignment: TableCellVerticalAlignment.middle,
             columnWidths: const {
               0: FlexColumnWidth(2),   // 订单号
@@ -239,8 +236,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               }),
             ],
           ),
-        ),
-      ),
     );
   }
 
