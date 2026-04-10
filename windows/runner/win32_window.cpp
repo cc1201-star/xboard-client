@@ -2,43 +2,31 @@
 
 #include <dwmapi.h>
 #include <flutter_windows.h>
+#include <windowsx.h>  // GET_X_LPARAM, GET_Y_LPARAM
 
 #include "resource.h"
 
 namespace {
 
 /// Window attribute that enables dark mode window decorations.
-///
-/// Redefined in case the developer's machine has a Windows SDK older than
-/// version 10.0.22000.0.
-/// See: https://docs.microsoft.com/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
 constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 
-/// Registry key for app theme preference.
-///
-/// A value of 0 indicates apps should use dark mode. A non-zero or missing
-/// value indicates apps should use light mode.
 constexpr const wchar_t kGetPreferredBrightnessRegKey[] =
   L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
 constexpr const wchar_t kGetPreferredBrightnessRegValue[] = L"AppsUseLightTheme";
 
-// The number of Win32Window objects that currently exist.
 static int g_active_window_count = 0;
 
 using EnableNonClientDpiScaling = BOOL __stdcall(HWND hwnd);
 
-// Scale helper to convert logical scaler values to physical using passed in
-// scale factor
 int Scale(int source, double scale_factor) {
   return static_cast<int>(source * scale_factor);
 }
 
-// Dynamically loads the |EnableNonClientDpiScaling| from the User32 module.
-// This API is only needed for PerMonitor V1 awareness mode.
 void EnableFullDpiSupportIfAvailable(HWND hwnd) {
   HMODULE user32_module = LoadLibraryA("User32.dll");
   if (!user32_module) {
@@ -55,12 +43,10 @@ void EnableFullDpiSupportIfAvailable(HWND hwnd) {
 
 }  // namespace
 
-// Manages the Win32Window's window class registration.
 class WindowClassRegistrar {
  public:
   ~WindowClassRegistrar() = default;
 
-  // Returns the singleton registrar instance.
   static WindowClassRegistrar* GetInstance() {
     if (!instance_) {
       instance_ = new WindowClassRegistrar();
@@ -68,12 +54,7 @@ class WindowClassRegistrar {
     return instance_;
   }
 
-  // Returns the name of the window class, registering the class if it hasn't
-  // previously been registered.
   const wchar_t* GetWindowClass();
-
-  // Unregisters the window class. Should only be called if there are no
-  // instances of the window.
   void UnregisterWindowClass();
 
  private:
@@ -134,8 +115,12 @@ bool Win32Window::Create(const std::wstring& title,
   UINT dpi = FlutterDesktopGetDpiForMonitor(monitor);
   double scale_factor = dpi / 96.0;
 
+  // 使用 WS_OVERLAPPEDWINDOW 但后续通过 DWM 扩展去掉可见边框
+  // 保留 WS_THICKFRAME 以支持拖拽调整大小
+  // 保留 WS_MAXIMIZEBOX | WS_MINIMIZEBOX 支持系统级最大化/最小化
   HWND window = CreateWindow(
-      window_class, title.c_str(), WS_OVERLAPPEDWINDOW,
+      window_class, title.c_str(),
+      WS_OVERLAPPEDWINDOW,
       Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
       Scale(size.width, scale_factor), Scale(size.height, scale_factor),
       nullptr, nullptr, GetModuleHandle(nullptr), this);
@@ -143,6 +128,11 @@ bool Win32Window::Create(const std::wstring& title,
   if (!window) {
     return false;
   }
+
+  // 通过 DWM 扩展客户区到整个窗口，消除系统标题栏和边框
+  // 同时保留窗口阴影效果
+  MARGINS margins = {0, 0, 0, 1};  // bottom=1 保留阴影
+  DwmExtendFrameIntoClientArea(window, &margins);
 
   UpdateTheme(window);
 
@@ -197,10 +187,61 @@ Win32Window::MessageHandler(HWND hwnd,
 
       return 0;
     }
+
+    // 处理非客户区计算 - 将整个窗口变为客户区，消除系统标题栏
+    case WM_NCCALCSIZE: {
+      if (wparam == TRUE) {
+        // 当最大化时，需要考虑任务栏，否则窗口会覆盖任务栏
+        if (IsZoomed(hwnd)) {
+          NCCALCSIZE_PARAMS* params = reinterpret_cast<NCCALCSIZE_PARAMS*>(lparam);
+          HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+          MONITORINFO mi;
+          mi.cbSize = sizeof(mi);
+          GetMonitorInfo(monitor, &mi);
+          params->rgrc[0] = mi.rcWork;
+        }
+        return 0;  // 返回 0 表示整个窗口都是客户区
+      }
+      break;
+    }
+
+    // 处理边缘拖拽调整大小的命中测试
+    case WM_NCHITTEST: {
+      LRESULT result = DefWindowProc(hwnd, message, wparam, lparam);
+      // 如果默认处理已经识别到边框区域，保留该行为（拖拽调整大小）
+      if (result == HTLEFT || result == HTRIGHT ||
+          result == HTTOP || result == HTBOTTOM ||
+          result == HTTOPLEFT || result == HTTOPRIGHT ||
+          result == HTBOTTOMLEFT || result == HTBOTTOMRIGHT) {
+        return result;
+      }
+
+      // 手动检测边缘区域（8px 边距）
+      POINT pt = {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+      RECT rc;
+      GetWindowRect(hwnd, &rc);
+
+      const int border = 8;
+      bool left = pt.x >= rc.left && pt.x < rc.left + border;
+      bool right = pt.x >= rc.right - border && pt.x < rc.right;
+      bool top = pt.y >= rc.top && pt.y < rc.top + border;
+      bool bottom = pt.y >= rc.bottom - border && pt.y < rc.bottom;
+
+      if (top && left) return HTTOPLEFT;
+      if (top && right) return HTTOPRIGHT;
+      if (bottom && left) return HTBOTTOMLEFT;
+      if (bottom && right) return HTBOTTOMRIGHT;
+      if (left) return HTLEFT;
+      if (right) return HTRIGHT;
+      if (top) return HTTOP;
+      if (bottom) return HTBOTTOM;
+
+      return HTCLIENT;
+    }
+
     case WM_SIZE: {
       RECT rect = GetClientArea();
       if (child_content_ != nullptr) {
-        // Size and position the child window.
         MoveWindow(child_content_, rect.left, rect.top, rect.right - rect.left,
                    rect.bottom - rect.top, TRUE);
       }
@@ -264,12 +305,10 @@ void Win32Window::SetQuitOnClose(bool quit_on_close) {
 }
 
 bool Win32Window::OnCreate() {
-  // No-op; provided for subclasses.
   return true;
 }
 
 void Win32Window::OnDestroy() {
-  // No-op; provided for subclasses.
 }
 
 void Win32Window::UpdateTheme(HWND const window) {
