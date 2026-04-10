@@ -7,7 +7,7 @@ class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._storage);
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     final token = await _storage.getAuthToken();
     if (token != null) {
       options.headers['Authorization'] = token;

@@ -4,6 +4,7 @@ import 'package:xboard_client/data/api/models/auth_response.dart';
 import 'package:xboard_client/data/api/xboard_api_client.dart';
 import 'package:xboard_client/data/api/interceptors/auth_interceptor.dart';
 import 'package:xboard_client/data/local/secure_storage.dart';
+import 'package:xboard_client/presentation/providers/vpn_state_provider.dart';
 
 final secureStorageProvider = Provider<SecureStorageService>((ref) {
   return SecureStorageService();
@@ -198,8 +199,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    // 先停止 VPN 连接和相关定时器
+    try {
+      final vpnNotifier = _ref.read(vpnStateProvider.notifier);
+      await vpnNotifier.disconnect();
+    } catch (_) {}
+    // 清除存储
     await _storage.clearAll();
-    state = const AuthState();
+    state = const AuthState(isInitialized: true);
   }
 }
 
