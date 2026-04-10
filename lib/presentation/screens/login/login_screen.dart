@@ -126,7 +126,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
       // 拖拽区域：顶部留8px给系统调整大小，底部留出按钮区域
       if (isDesktopPlatform)
         Positioned(
-          top: 8, left: 0, right: 138, bottom: 0,
+          top: 8, left: 8, right: 138, bottom: 8,
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onPanStart: (_) => windowManager.startDragging(),
