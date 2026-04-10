@@ -40,6 +40,7 @@ dev_dependencies:
   freezed: ^2.5.8
   json_serializable: ^6.9.4
   riverpod_generator: ^2.6.3
+  msix: ^3.16.8
 
 flutter:
   uses-material-design: true
@@ -47,3 +48,12 @@ flutter:
     - assets/images/
     - assets/app_icon.ico
     - assets/app_icon.png
+
+msix_config:
+  display_name: Xboard
+  publisher_display_name: Xboard
+  identity_name: com.xboard.client
+  msix_version: 1.0.0.0
+  logo_path: assets/app_icon.png
+  capabilities: internetClient, internetClientServer
+  install_certificate: false

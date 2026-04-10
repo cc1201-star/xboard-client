@@ -18,10 +18,11 @@ jobs:
       - run: flutter config --enable-windows-desktop
       - run: flutter pub get
       - run: flutter build windows --release
+      - run: dart run msix:create --install-certificate false
       - uses: actions/upload-artifact@v4
         with:
-          name: xboard-windows
-          path: build/windows/x64/runner/Release/
+          name: xboard-windows-msix
+          path: build/windows/x64/runner/Release/*.msix
 
   build-macos:
     runs-on: macos-latest
@@ -33,10 +34,23 @@ jobs:
       - run: flutter config --enable-macos-desktop
       - run: flutter pub get
       - run: flutter build macos --release
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "Xboard" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "xboard_client.app" 150 190 \
+            --app-drop-link 450 190 \
+            --no-internet-enable \
+            "build/macos/Xboard.dmg" \
+            "build/macos/Build/Products/Release/xboard_client.app"
       - uses: actions/upload-artifact@v4
         with:
-          name: xboard-macos
-          path: build/macos/Build/Products/Release/*.app
+          name: xboard-macos-dmg
+          path: build/macos/Xboard.dmg
 
   build-linux:
     runs-on: ubuntu-latest
@@ -51,7 +65,11 @@ jobs:
       - run: flutter config --enable-linux-desktop
       - run: flutter pub get
       - run: flutter build linux --release
+      - name: Create tar.gz
+        run: |
+          cd build/linux/x64/release/bundle
+          tar -czf ../../../../../xboard-linux.tar.gz .
       - uses: actions/upload-artifact@v4
         with:
           name: xboard-linux
-          path: build/linux/x64/release/bundle/
+          path: xboard-linux.tar.gz
