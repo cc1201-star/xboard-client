@@ -18,11 +18,12 @@ jobs:
       - run: flutter config --enable-windows-desktop
       - run: flutter pub get
       - run: flutter build windows --release
-      - run: dart run msix:create --install-certificate false
+      - name: Build installer with Inno Setup
+        run: iscc windows\installer.iss
       - uses: actions/upload-artifact@v4
         with:
-          name: xboard-windows-msix
-          path: build/windows/x64/runner/Release/*.msix
+          name: xboard-windows-setup
+          path: build/installer/Xboard-Setup.exe
 
   build-macos:
     runs-on: macos-latest

@@ -11,7 +11,7 @@ Future<void> initPlatform() async {
       minimumSize: Size(600, 480),
       center: true,
       title: 'Xboard',
-      titleBarStyle: TitleBarStyle.normal,
+      titleBarStyle: TitleBarStyle.hidden,
       backgroundColor: Colors.transparent,
     );
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
