@@ -78,7 +78,7 @@ const wchar_t* WindowClassRegistrar::GetWindowClass() {
     window_class.hInstance = GetModuleHandle(nullptr);
     window_class.hIcon =
         LoadIcon(window_class.hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
-    window_class.hbrBackground = 0;
+    window_class.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
     window_class.lpszMenuName = nullptr;
     window_class.lpfnWndProc = Win32Window::WndProc;
     RegisterClass(&window_class);
@@ -131,8 +131,8 @@ bool Win32Window::Create(const std::wstring& title,
     return false;
   }
 
-  // DWM 扩展客户区，启用窗口阴影
-  MARGINS margins = {0, 0, 0, 1};
+  // DWM 扩展到整个窗口，消除边框白线，保留阴影
+  MARGINS margins = {-1, -1, -1, -1};
   DwmExtendFrameIntoClientArea(window, &margins);
 
   UpdateTheme(window);
