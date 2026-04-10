@@ -38,7 +38,7 @@ class XboardApiClient {
     String? inviteCode,
   }) async {
     return _dio.post(ApiEndpoints.register, data: {
-      'email': email,
+      'username': email,
       'password': password,
       if (emailCode != null) 'email_code': emailCode,
       if (inviteCode != null) 'invite_code': inviteCode,
