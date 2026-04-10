@@ -119,13 +119,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     final isWide = size.width > 768;
     return Scaffold(body: Stack(children: [
       // 登录内容
-      GestureDetector(
-        onPanStart: isDesktopPlatform ? (_) => windowManager.startDragging() : null,
-        child: AnimatedBuilder(animation: _anim, builder: (context, _) {
-          final t = _anim.value;
-          return isWide ? _desktop(size, t) : _mobile(size, t);
-        }),
-      ),
+      AnimatedBuilder(animation: _anim, builder: (context, _) {
+        final t = _anim.value;
+        return isWide ? _desktop(size, t) : _mobile(size, t);
+      }),
+      // 拖拽区域：顶部留8px给系统调整大小，底部留出按钮区域
+      if (isDesktopPlatform)
+        Positioned(
+          top: 8, left: 0, right: 138, bottom: 0,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onPanStart: (_) => windowManager.startDragging(),
+          ),
+        ),
       // 右上角浮动窗口按钮
       if (isDesktopPlatform)
         Positioned(
@@ -351,7 +357,7 @@ class _WindowButtonState extends State<_WindowButton> {
         child: Container(
           width: 46, height: 32,
           color: _hovering ? widget.hoverColor : Colors.transparent,
-          child: Icon(widget.icon, color: Colors.white70, size: 14),
+          child: Icon(widget.icon, color: const Color(0xFF4B5563), size: 14),
         ),
       ),
     );
