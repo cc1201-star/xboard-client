@@ -31,9 +31,7 @@ class AppColors {
 }
 
 class AppTheme {
-  // 使用系统默认字体，确保中英文都能正常渲染
-  // Windows: Microsoft YaHei, macOS: PingFang SC, Linux: Noto Sans CJK
-  static const String? fontFamily = null;
+  static const String fontFamily = 'Microsoft YaHei';
 
   /// Create light theme with dynamic primary color (matching sidebar_color)
   static ThemeData lightThemeWith(Color primary) {
