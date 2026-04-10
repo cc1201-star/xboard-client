@@ -11,8 +11,8 @@ Future<void> initPlatform() async {
       minimumSize: Size(600, 480),
       center: true,
       title: 'Xboard',
-      titleBarStyle: TitleBarStyle.hidden,
-      backgroundColor: Colors.white,
+      titleBarStyle: TitleBarStyle.normal,
+      backgroundColor: Colors.transparent,
     );
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
       // 拦截窗口关闭，改为隐藏到托盘

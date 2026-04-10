@@ -115,12 +115,14 @@ bool Win32Window::Create(const std::wstring& title,
   UINT dpi = FlutterDesktopGetDpiForMonitor(monitor);
   double scale_factor = dpi / 96.0;
 
-  // 使用 WS_OVERLAPPEDWINDOW 但后续通过 DWM 扩展去掉可见边框
-  // 保留 WS_THICKFRAME 以支持拖拽调整大小
-  // 保留 WS_MAXIMIZEBOX | WS_MINIMIZEBOX 支持系统级最大化/最小化
+  // 创建无边框窗口：
+  // WS_POPUP: 无标题栏、无边框
+  // WS_THICKFRAME: 保留边缘拖拽调整大小
+  // WS_MINIMIZEBOX | WS_MAXIMIZEBOX: 支持任务栏右键最小化/最大化
+  // WS_CLIPCHILDREN: 防止子窗口闪烁
   HWND window = CreateWindow(
       window_class, title.c_str(),
-      WS_OVERLAPPEDWINDOW,
+      WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN,
       Scale(origin.x, scale_factor), Scale(origin.y, scale_factor),
       Scale(size.width, scale_factor), Scale(size.height, scale_factor),
       nullptr, nullptr, GetModuleHandle(nullptr), this);
@@ -129,9 +131,8 @@ bool Win32Window::Create(const std::wstring& title,
     return false;
   }
 
-  // 通过 DWM 扩展客户区到整个窗口，消除系统标题栏和边框
-  // 同时保留窗口阴影效果
-  MARGINS margins = {0, 0, 0, 1};  // bottom=1 保留阴影
+  // DWM 扩展客户区，启用窗口阴影
+  MARGINS margins = {0, 0, 0, 1};
   DwmExtendFrameIntoClientArea(window, &margins);
 
   UpdateTheme(window);
