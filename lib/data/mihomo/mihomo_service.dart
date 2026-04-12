@@ -300,7 +300,7 @@ class MihomoService {
     final groupNames = _state.proxyGroups.map((g) => g.name).toSet();
     for (final g in _state.proxyGroups) {
       if (g.type == 'Selector' && g.name != 'GLOBAL') {
-        if (g.all.any((p) => !groupNames.contains(p) && p != 'DIRECT' && p != 'REJECT')) {
+        if (g.all.any((p) => !groupNames.contains(p) && p != 'DIRECT' && p != 'REJECT' && p != 'Compatible')) {
           return g.name;
         }
       }
@@ -313,7 +313,7 @@ class MihomoService {
     final groupNames = _state.proxyGroups.map((g) => g.name).toSet();
     for (final g in _state.proxyGroups) {
       if (g.type == 'Selector' && g.name != 'GLOBAL') {
-        if (g.all.any((p) => !groupNames.contains(p) && p != 'DIRECT' && p != 'REJECT')) {
+        if (g.all.any((p) => !groupNames.contains(p) && p != 'DIRECT' && p != 'REJECT' && p != 'Compatible')) {
           return g.name;
         }
       }
@@ -372,7 +372,7 @@ class MihomoService {
           now: now,
           all: all,
         ));
-      } else if (type != 'Direct' && type != 'Reject' && type != 'Block') {
+      } else if (type != 'Direct' && type != 'Reject' && type != 'Block' && type != 'Compatible') {
         proxies.add(MihomoProxy(
           name: name,
           type: type,

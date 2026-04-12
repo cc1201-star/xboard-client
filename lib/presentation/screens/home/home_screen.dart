@@ -392,8 +392,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   final proxyNames =
                       vpnState.proxies.map((p) => p.name).toSet();
                   const infoPatterns = ['剩余流量', '套餐到期', '过滤掉', '距离下次重置'];
+                  const builtins = ['DIRECT', 'REJECT', 'COMPATIBLE', 'Compatible'];
                   for (final member in groupInfo.all) {
                     if (!proxyNames.contains(member)) continue;
+                    if (builtins.contains(member)) continue;
                     if (infoPatterns.any((p) => member.contains(p))) continue;
                     testNode = member;
                     break;
