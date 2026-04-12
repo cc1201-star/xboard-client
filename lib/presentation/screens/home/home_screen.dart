@@ -369,17 +369,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               }
               if (!mounted || !ref.read(vpnStateProvider).isConnected) return;
 
-              // Explicitly load proxy groups (stream from start() may not
-              // have propagated to vpnStateProvider yet).
+              // Load proxy groups and sync to Riverpod state immediately.
               await n.refreshProxies();
-              // Small delay to let stream propagate to UI state.
-              await Future.delayed(const Duration(milliseconds: 300));
 
               // Find and select a real proxy node.
-              final group = n.findGroupFor(
-                ref.read(vpnStateProvider).proxies.firstOrNull?.name ?? '',
-              ) ?? n.primaryGroup;
-              final proxies = ref.read(vpnStateProvider).proxies;
+              // Use mihomoProxies (direct read) to avoid stream delay.
+              final proxies = n.mihomoProxies;
+              final group = proxies.isNotEmpty
+                  ? n.findGroupFor(proxies.first.name) ?? n.primaryGroup
+                  : n.primaryGroup;
               String? testNode;
               if (group != null && proxies.isNotEmpty) {
                 testNode = proxies.first.name;

@@ -144,7 +144,13 @@ class VpnNotifier extends StateNotifier<VpnState> {
 
   Future<void> refreshProxies() async {
     await _mihomo.refreshProxies();
+    // Immediately sync mihomo's internal state to Riverpod,
+    // don't wait for async stream propagation.
+    _onMihomoState(_mihomo.currentState);
   }
+
+  /// Read proxy list directly from mihomo (bypasses stream delay).
+  List<MihomoProxy> get mihomoProxies => _mihomo.currentState.proxies;
 
   @override
   void dispose() {
