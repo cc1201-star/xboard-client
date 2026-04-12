@@ -76,7 +76,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
     final vpn = ref.read(vpnStateProvider);
 
     // Tapping the currently active node → disconnect.
-    if (_nodeMatches(vpn.currentNode, name) && vpn.isConnected) {
+    if (_isNodeActive(name, vpn)) {
       await notifier.disconnect();
       _toast('已断开');
       return;
@@ -184,7 +184,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
     GlobalKey? key = _cardKeys[vpn.currentNode!];
     if (key == null) {
       for (final entry in _cardKeys.entries) {
-        if (_nodeMatches(vpn.currentNode, entry.key)) {
+        if (_isNodeActive(entry.key, vpn)) {
           key = entry.value;
           break;
         }
@@ -362,9 +362,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
                       isDark,
                       primary,
                       cardKey: key,
-                      currentNode: vpn.currentNode,
-                      isVpnConnected: vpn.isConnected,
-                      isVpnConnecting: vpn.status == VpnStatus.connecting,
+                      vpn: vpn,
                     );
                   }).toList(),
                 );
@@ -375,13 +373,25 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
     );
   }
 
-  /// Check whether [currentNode] (from Clash API) matches [nodeName] (from
-  /// Xboard server list).  Names may differ by a country-code prefix such as
-  /// "us|美国-直连" vs "美国-直连", so we fall back to a contains check.
-  static bool _nodeMatches(String? currentNode, String nodeName) {
-    if (currentNode == null || nodeName.isEmpty) return false;
-    if (currentNode == nodeName) return true;
-    return currentNode.contains(nodeName) || nodeName.contains(currentNode);
+  /// Check whether [nodeName] (from Xboard server list) is the currently
+  /// active proxy.  Clash proxy names may differ significantly from Xboard
+  /// names (e.g. "🇺🇸 US-Premium | VMess" vs "美国-Premium"), so we check
+  /// multiple sources:
+  ///   1. Direct / contains match against vpn.currentNode
+  ///   2. Contains match against every proxyGroup's `now` field
+  static bool _isNodeActive(String nodeName, VpnState vpn) {
+    if (!vpn.isConnected || nodeName.isEmpty) return false;
+    if (_fuzzyMatch(vpn.currentNode, nodeName)) return true;
+    for (final g in vpn.proxyGroups) {
+      if (g.now != null && _fuzzyMatch(g.now, nodeName)) return true;
+    }
+    return false;
+  }
+
+  static bool _fuzzyMatch(String? a, String b) {
+    if (a == null || b.isEmpty) return false;
+    if (a == b) return true;
+    return a.contains(b) || b.contains(a);
   }
 
   Widget _buildNodeCard(
@@ -390,9 +400,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
     bool isDark,
     Color primary, {
     required GlobalKey cardKey,
-    required String? currentNode,
-    required bool isVpnConnected,
-    required bool isVpnConnecting,
+    required VpnState vpn,
   }) {
     final name = (node['name'] as String?) ?? '未命名';
     final type = (node['type'] as String?) ?? '';
@@ -402,8 +410,9 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         : '${rate ?? 1}x';
     final tags = (node['tags'] as List?)?.cast<dynamic>() ?? const [];
 
-    final isActive = isVpnConnected && _nodeMatches(currentNode, name);
+    final isActive = _isNodeActive(name, vpn);
     final isPending = _pendingNodeName == name;
+    final isVpnConnecting = vpn.status == VpnStatus.connecting;
     final disabled = isPending ||
         (_pendingNodeName != null && _pendingNodeName != name) ||
         (isVpnConnecting && !isPending);
