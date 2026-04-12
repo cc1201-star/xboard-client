@@ -120,7 +120,13 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         if (cur.isConnected) {
           final selected = await notifier.selectNode(_primaryProxyGroup, name);
           if (!selected) {
-            _toast('切换节点失败，请检查订阅配置', isError: true);
+            // Read logs for the actual error
+            final vpnLogs = ref.read(vpnStateProvider).logs;
+            final errLog = vpnLogs.reversed
+                .where((l) => l.contains('[ERROR]'))
+                .take(2)
+                .join('\n');
+            _toast('切换节点失败: ${errLog.isNotEmpty ? errLog : "未知错误"}', isError: true);
             return;
           }
           // Verify the proxy actually works by testing delay.

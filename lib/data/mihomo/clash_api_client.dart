@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:xboard_client/core/constants/app_constants.dart';
 
 /// HTTP client for mihomo's Clash-compatible RESTful API (external-controller).
@@ -11,8 +12,8 @@ class ClashApiClient {
     _dio = Dio(BaseOptions(
       baseUrl:
           'http://${AppConstants.clashApiHost}:${AppConstants.clashApiPort}',
-      connectTimeout: const Duration(seconds: 3),
-      receiveTimeout: const Duration(seconds: 3),
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 5),
     ));
   }
 
@@ -52,12 +53,40 @@ class ClashApiClient {
   Future<bool> selectProxy(String group, String proxyName) async {
     try {
       final resp = await _dio.put(
-        '/proxies/${Uri.encodeComponent(group)}',
+        '/proxies/$group',
         data: {'name': proxyName},
       );
+      debugPrint('[ClashAPI] selectProxy($group, $proxyName) -> ${resp.statusCode}');
       return resp.statusCode == 204 || resp.statusCode == 200;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ClashAPI] selectProxy($group, $proxyName) FAILED: $e');
       return false;
+    }
+  }
+
+  /// Return the last error message from selectProxy for UI display.
+  String? _lastSelectError;
+  String? get lastSelectError => _lastSelectError;
+
+  Future<({bool ok, String? error})> selectProxyWithError(String group, String proxyName) async {
+    try {
+      final resp = await _dio.put(
+        '/proxies/$group',
+        data: {'name': proxyName},
+      );
+      _lastSelectError = null;
+      return (ok: resp.statusCode == 204 || resp.statusCode == 200, error: null);
+    } on DioException catch (e) {
+      final msg = e.response?.data is Map
+          ? (e.response!.data['message'] as String? ?? e.message)
+          : (e.message ?? e.toString());
+      _lastSelectError = msg;
+      debugPrint('[ClashAPI] selectProxy($group, $proxyName) FAILED: $msg');
+      return (ok: false, error: msg);
+    } catch (e) {
+      _lastSelectError = e.toString();
+      debugPrint('[ClashAPI] selectProxy($group, $proxyName) FAILED: $e');
+      return (ok: false, error: e.toString());
     }
   }
 
@@ -68,11 +97,12 @@ class ClashApiClient {
   }) async {
     try {
       final resp = await _dio.get(
-        '/proxies/${Uri.encodeComponent(proxyName)}/delay',
+        '/proxies/$proxyName/delay',
         queryParameters: {'url': testUrl, 'timeout': timeout},
       );
       return (resp.data['delay'] as num?)?.toInt() ?? -1;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ClashAPI] getProxyDelay($proxyName) FAILED: $e');
       return -1;
     }
   }

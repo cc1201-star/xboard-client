@@ -267,12 +267,17 @@ class MihomoService {
   }
 
   Future<bool> selectProxy(String group, String proxyName) async {
-    final ok = await _clashApi.selectProxy(group, proxyName);
-    if (ok) {
+    final result = await _clashApi.selectProxyWithError(group, proxyName);
+    if (result.ok) {
       _emit(_state.copyWith(selectedNode: proxyName));
       await refreshProxies();
+    } else {
+      _onLog('[ERROR] 切换节点失败: group=$group, proxy=$proxyName, error=${result.error}');
+      // Also log available groups for debugging
+      final groups = _state.proxyGroups.map((g) => g.name).toList();
+      _onLog('[ERROR] 当前可用代理组: $groups');
     }
-    return ok;
+    return result.ok;
   }
 
   Future<int> testProxyDelay(String proxyName) =>
