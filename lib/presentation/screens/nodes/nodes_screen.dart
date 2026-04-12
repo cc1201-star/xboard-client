@@ -85,23 +85,18 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
 
     setState(() => _pendingNodeName = name);
     try {
+      // Always fetch fresh config to pick up server-side changes.
+      if (ref.read(subscriptionProvider).info?.subscribeUrl == null) {
+        await subNotifier.fetchSubscription();
+      }
+      final url = ref.read(subscriptionProvider).info?.subscribeUrl;
+      if (url == null || url.isEmpty) {
+        _toast('获取订阅地址失败，请先在仪表盘确认订阅状态', isError: true);
+        return;
+      }
+      await subNotifier.fetchMihomoConfig();
       var config = ref.read(subscriptionProvider).mihomoConfig;
       if (config == null || config.isEmpty) {
-        // Ensure subscription info (including subscribeUrl) is loaded first.
-        final subState = ref.read(subscriptionProvider);
-        if (subState.info?.subscribeUrl == null) {
-          await subNotifier.fetchSubscription();
-        }
-        final url = ref.read(subscriptionProvider).info?.subscribeUrl;
-        if (url == null || url.isEmpty) {
-          _toast('获取订阅地址失败，请先在仪表盘确认订阅状态', isError: true);
-          return;
-        }
-        await subNotifier.fetchMihomoConfig();
-        config = ref.read(subscriptionProvider).mihomoConfig;
-      }
-      if (config == null || config.isEmpty) {
-        final url = ref.read(subscriptionProvider).info?.subscribeUrl ?? '无';
         _toast('下载订阅配置失败 (URL: $url)', isError: true);
         return;
       }
