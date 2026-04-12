@@ -369,14 +369,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               }
               if (!mounted || !ref.read(vpnStateProvider).isConnected) return;
 
-              // start() already called refreshProxies() which auto-detects
-              // the selected node from the proxy group chain. Read it directly.
-              final currentNode = ref.read(vpnStateProvider).currentNode;
-              final testNode = currentNode
-                  ?? ref.read(vpnStateProvider).proxies.firstOrNull?.name;
+              // Explicitly load proxy groups (stream from start() may not
+              // have propagated to vpnStateProvider yet).
+              await n.refreshProxies();
+              // Small delay to let stream propagate to UI state.
+              await Future.delayed(const Duration(milliseconds: 300));
+
+              // Find and select a real proxy node.
+              final group = n.findGroupFor(
+                ref.read(vpnStateProvider).proxies.firstOrNull?.name ?? '',
+              ) ?? n.primaryGroup;
+              final proxies = ref.read(vpnStateProvider).proxies;
+              String? testNode;
+              if (group != null && proxies.isNotEmpty) {
+                testNode = proxies.first.name;
+                await n.selectNode(group, testNode);
+              }
+              testNode ??= ref.read(vpnStateProvider).currentNode;
               if (testNode == null) return;
 
-              // Verify the proxy actually works (retry once on first launch).
+              // Verify the proxy works (retry once — mihomo may still be warming up).
               var delay = await n.testDelay(testNode);
               if (delay < 0) {
                 await Future.delayed(const Duration(seconds: 2));

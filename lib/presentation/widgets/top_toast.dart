@@ -3,22 +3,31 @@ import 'package:flutter/material.dart';
 /// Sidebar width used in ShellScreen — keep in sync.
 const _sidebarWidth = 256.0;
 const _mobileBreakpoint = 1024.0;
-/// Match the content area's padding (pages use EdgeInsets.all(32)).
-const _contentPadding = 32.0;
-/// Account for desktop scrollbar width so Toast matches card width.
-const _scrollbarWidth = 14.0;
 
-/// Show a toast-style message at the top of the **content area** (avoids
-/// overlapping the sidebar). Width adapts dynamically to the window size.
+/// Show a toast-style message aligned with the content area cards.
+/// Uses a GlobalKey on the content area if available, otherwise calculates
+/// from screen dimensions.
 void showTopToast(BuildContext context, String message, {bool isError = false}) {
   final overlay = Overlay.of(context);
   final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  // Try to find the actual content area bounds by walking up the tree
+  // to find the nearest scrollable or content container.
+  final box = context.findRenderObject() as RenderBox?;
+  Offset? contentOrigin;
+  double? contentWidth;
+  if (box != null && box.hasSize) {
+    contentOrigin = box.localToGlobal(Offset.zero);
+    contentWidth = box.size.width;
+  }
 
   late OverlayEntry entry;
   entry = OverlayEntry(builder: (ctx) => _TopToast(
     message: message,
     isError: isError,
     isDark: isDark,
+    contentOrigin: contentOrigin,
+    contentWidth: contentWidth,
     onDismiss: () => entry.remove(),
   ));
 
@@ -29,9 +38,18 @@ class _TopToast extends StatefulWidget {
   final String message;
   final bool isError;
   final bool isDark;
+  final Offset? contentOrigin;
+  final double? contentWidth;
   final VoidCallback onDismiss;
 
-  const _TopToast({required this.message, required this.isError, required this.isDark, required this.onDismiss});
+  const _TopToast({
+    required this.message,
+    required this.isError,
+    required this.isDark,
+    this.contentOrigin,
+    this.contentWidth,
+    required this.onDismiss,
+  });
 
   @override
   State<_TopToast> createState() => _TopToastState();
@@ -64,41 +82,53 @@ class _TopToastState extends State<_TopToast> with SingleTickerProviderStateMixi
   @override
   Widget build(BuildContext context) {
     final bg = widget.isError ? const Color(0xFFEF4444) : const Color(0xFF22C55E);
-    // Dynamically compute position based on current window size.
     final screenWidth = MediaQuery.of(context).size.width;
     final hasSidebar = screenWidth >= _mobileBreakpoint;
-    final sidebarOffset = hasSidebar ? _sidebarWidth : 0.0;
 
-    // Title bar height on desktop (see CustomTitleBar).
+    // Title bar height on desktop.
     const titleBarH = 32.0;
     final topOffset = hasSidebar ? titleBarH + 12 : MediaQuery.of(context).padding.top + 12;
 
-    final rightPad = hasSidebar
-        ? _contentPadding + _scrollbarWidth // desktop: match card width inside scrollable area
-        : _contentPadding;
+    double left;
+    double right;
+
+    if (widget.contentOrigin != null && widget.contentWidth != null) {
+      // Use actual content area bounds — most accurate.
+      left = widget.contentOrigin!.dx;
+      right = screenWidth - widget.contentOrigin!.dx - widget.contentWidth!;
+    } else if (hasSidebar) {
+      left = _sidebarWidth;
+      right = 0;
+    } else {
+      left = 16;
+      right = 16;
+    }
 
     return Positioned(
       top: topOffset,
-      left: sidebarOffset + _contentPadding,
-      right: rightPad,
+      left: left,
+      right: right,
       child: SlideTransition(
         position: _slide,
         child: Material(
           color: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: bg.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: bg.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+              ),
+              child: Row(children: [
+                Icon(widget.isError ? Icons.error_outline : Icons.check_circle_outline,
+                  color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Text(widget.message,
+                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500))),
+              ]),
             ),
-            child: Row(children: [
-              Icon(widget.isError ? Icons.error_outline : Icons.check_circle_outline,
-                color: Colors.white, size: 20),
-              const SizedBox(width: 10),
-              Expanded(child: Text(widget.message,
-                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500))),
-            ]),
           ),
         ),
       ),
