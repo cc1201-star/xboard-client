@@ -82,6 +82,23 @@ class MihomoProcessManager {
     return out.path;
   }
 
+  /// Extract geo database files (geoip.dat, geosite.dat) from assets to the
+  /// working directory. mihomo needs these for GEOIP/GEOSITE rules.
+  Future<void> ensureGeoFiles() async {
+    final dir = await workingDir();
+    for (final name in ['geoip.dat', 'geosite.dat']) {
+      final out = File('${dir.path}${Platform.pathSeparator}$name');
+      if (await out.exists()) continue;
+      try {
+        final data = await rootBundle.load('assets/bin/$name');
+        final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        await out.writeAsBytes(bytes, flush: true);
+      } catch (_) {
+        debugPrint('Warning: geo file $name not bundled');
+      }
+    }
+  }
+
   /// Write the mihomo config.yaml and return its path.
   Future<String> writeConfig(String yaml) async {
     final dir = await workingDir();
@@ -102,6 +119,7 @@ class MihomoProcessManager {
 
     try {
       final dir = await workingDir();
+      await ensureGeoFiles();
       await writeConfig(yaml);
 
       _process = await Process.start(
