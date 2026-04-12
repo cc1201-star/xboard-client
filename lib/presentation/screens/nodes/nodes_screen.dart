@@ -88,14 +88,21 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
       var config = ref.read(subscriptionProvider).mihomoConfig;
       if (config == null || config.isEmpty) {
         // Ensure subscription info (including subscribeUrl) is loaded first.
-        if (ref.read(subscriptionProvider).info?.subscribeUrl == null) {
+        final subState = ref.read(subscriptionProvider);
+        if (subState.info?.subscribeUrl == null) {
           await subNotifier.fetchSubscription();
+        }
+        final url = ref.read(subscriptionProvider).info?.subscribeUrl;
+        if (url == null || url.isEmpty) {
+          _toast('获取订阅地址失败，请先在仪表盘确认订阅状态', isError: true);
+          return;
         }
         await subNotifier.fetchMihomoConfig();
         config = ref.read(subscriptionProvider).mihomoConfig;
       }
       if (config == null || config.isEmpty) {
-        _toast('获取订阅配置失败', isError: true);
+        final url = ref.read(subscriptionProvider).info?.subscribeUrl ?? '无';
+        _toast('下载订阅配置失败 (URL: $url)', isError: true);
         return;
       }
 
@@ -104,7 +111,12 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         await Future.delayed(const Duration(milliseconds: 300));
       }
 
-      await notifier.connect(config);
+      final ok = await notifier.connect(config);
+      if (ok == false) {
+        final err = ref.read(vpnStateProvider).errorMessage;
+        _toast(err ?? '启动 mihomo 失败', isError: true);
+        return;
+      }
 
       // Wait for actual connection (Clash API verified).
       for (var i = 0; i < 20; i++) {
@@ -122,7 +134,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
       }
 
       final err = ref.read(vpnStateProvider).errorMessage;
-      _toast(err ?? '连接超时', isError: true);
+      _toast(err ?? '连接超时(等待Clash API 10秒无响应)', isError: true);
     } catch (e) {
       _toast('连接失败: $e', isError: true);
     } finally {

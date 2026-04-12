@@ -113,14 +113,14 @@ class VpnNotifier extends StateNotifier<VpnState> {
   }
 
   /// Connect using the raw Clash.Meta YAML config from the subscription.
-  Future<void> connect(String mihomoConfig) async {
+  Future<bool> connect(String mihomoConfig) async {
     if (kIsWeb) {
       state = state.copyWith(
         errorMessage: 'VPN 功能不支持 Web 平台，请下载桌面或安卓客户端',
       );
-      return;
+      return false;
     }
-    await _mihomo.start(mihomoConfig);
+    return await _mihomo.start(mihomoConfig);
   }
 
   Future<void> disconnect() async {
