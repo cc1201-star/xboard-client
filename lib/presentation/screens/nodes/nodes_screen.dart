@@ -353,7 +353,6 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
     final rateStr = rate is num
         ? '${rate.toStringAsFixed(rate == rate.toInt() ? 0 : 1)}x'
         : '${rate ?? 1}x';
-    final isOnline = node['is_online'] == true || node['is_online'] == 1;
     final tags = (node['tags'] as List?)?.cast<dynamic>() ?? const [];
 
     final isActive = isVpnConnected && currentNode == name;
@@ -361,6 +360,13 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
     final disabled = isPending ||
         (_pendingNodeName != null && _pendingNodeName != name) ||
         (isVpnConnecting && !isPending);
+
+    // 两个状态: 未连接 = 灰色灯 + "离线",已连接 = 绿色灯 + "在线" + 卡片变灰
+    final dotColor = isActive ? const Color(0xFF10B981) : AppColors.gray400;
+    final statusText = isActive ? '在线' : '离线';
+    final cardBg = isActive
+        ? (isDark ? AppColors.gray700 : AppColors.gray100)
+        : (isDark ? AppColors.gray800 : Colors.white);
 
     final delay = _delays[name];
     return Opacity(
@@ -373,11 +379,8 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
           width: w,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.gray800 : Colors.white,
+            color: cardBg,
             borderRadius: BorderRadius.circular(16),
-            border: isActive
-                ? Border.all(color: primary, width: 2)
-                : null,
             boxShadow: isDark
                 ? null
                 : [
@@ -397,9 +400,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: isOnline
-                          ? const Color(0xFF10B981)
-                          : AppColors.gray400,
+                      color: dotColor,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -415,25 +416,6 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (isActive)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: primary,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        '已连接',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -478,24 +460,14 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
                       child:
                           CircularProgressIndicator(strokeWidth: 2),
                     )
-                  else if (isActive)
-                    Text(
-                      '点击断开',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    )
                   else
                     Text(
-                      isOnline ? '点击连接' : '离线',
+                      statusText,
                       style: TextStyle(
                         fontSize: 12,
-                        color: isOnline
-                            ? (isDark
-                                ? AppColors.gray400
-                                : AppColors.gray500)
+                        fontWeight: FontWeight.w500,
+                        color: isActive
+                            ? const Color(0xFF10B981)
                             : AppColors.gray400,
                       ),
                     ),
