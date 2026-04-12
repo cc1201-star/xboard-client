@@ -76,7 +76,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
     final vpn = ref.read(vpnStateProvider);
 
     // Tapping the currently active node → disconnect.
-    if (vpn.currentNode == name && vpn.isConnected) {
+    if (_nodeMatches(vpn.currentNode, name) && vpn.isConnected) {
       await notifier.disconnect();
       _toast('已断开');
       return;
@@ -179,7 +179,17 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
       _toast('当前未连接任何节点');
       return;
     }
-    final key = _cardKeys[vpn.currentNode!];
+    // Find the card key using fuzzy matching (Clash name may differ from
+    // Xboard name, e.g. "us|美国-直连" vs "美国-直连").
+    GlobalKey? key = _cardKeys[vpn.currentNode!];
+    if (key == null) {
+      for (final entry in _cardKeys.entries) {
+        if (_nodeMatches(vpn.currentNode, entry.key)) {
+          key = entry.value;
+          break;
+        }
+      }
+    }
     final ctx = key?.currentContext;
     if (ctx == null) {
       _toast('未在列表中找到当前节点');
@@ -365,6 +375,15 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
     );
   }
 
+  /// Check whether [currentNode] (from Clash API) matches [nodeName] (from
+  /// Xboard server list).  Names may differ by a country-code prefix such as
+  /// "us|美国-直连" vs "美国-直连", so we fall back to a contains check.
+  static bool _nodeMatches(String? currentNode, String nodeName) {
+    if (currentNode == null || nodeName.isEmpty) return false;
+    if (currentNode == nodeName) return true;
+    return currentNode.contains(nodeName) || nodeName.contains(currentNode);
+  }
+
   Widget _buildNodeCard(
     Map<String, dynamic> node,
     double w,
@@ -383,7 +402,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         : '${rate ?? 1}x';
     final tags = (node['tags'] as List?)?.cast<dynamic>() ?? const [];
 
-    final isActive = isVpnConnected && currentNode == name;
+    final isActive = isVpnConnected && _nodeMatches(currentNode, name);
     final isPending = _pendingNodeName == name;
     final disabled = isPending ||
         (_pendingNodeName != null && _pendingNodeName != name) ||

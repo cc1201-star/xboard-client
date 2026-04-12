@@ -92,13 +92,19 @@ class ClashApiClient {
 
   Future<int> getProxyDelay(
     String proxyName, {
-    String testUrl = 'https://www.gstatic.com/generate_204',
+    String testUrl = 'https://cp.cloudflare.com/generate_204',
     int timeout = 5000,
   }) async {
     try {
       final resp = await _dio.get(
         '/proxies/$proxyName/delay',
         queryParameters: {'url': testUrl, 'timeout': timeout},
+        // The Clash API waits up to `timeout` ms for the proxy to respond,
+        // so Dio's own receive timeout must be longer to avoid a premature
+        // client-side timeout that masks a successful but slow test.
+        options: Options(
+          receiveTimeout: Duration(milliseconds: timeout + 3000),
+        ),
       );
       return (resp.data['delay'] as num?)?.toInt() ?? -1;
     } catch (e) {

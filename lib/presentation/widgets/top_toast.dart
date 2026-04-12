@@ -4,30 +4,18 @@ import 'package:flutter/material.dart';
 const _sidebarWidth = 256.0;
 const _mobileBreakpoint = 1024.0;
 
-/// Show a toast-style message aligned with the content area cards.
-/// Uses a GlobalKey on the content area if available, otherwise calculates
-/// from screen dimensions.
+/// Show a toast-style message aligned with the content area (right of sidebar).
+/// Always calculates position from screen dimensions so the toast spans the
+/// full content width regardless of which widget triggered it.
 void showTopToast(BuildContext context, String message, {bool isError = false}) {
   final overlay = Overlay.of(context);
   final isDark = Theme.of(context).brightness == Brightness.dark;
-
-  // Try to find the actual content area bounds by walking up the tree
-  // to find the nearest scrollable or content container.
-  final box = context.findRenderObject() as RenderBox?;
-  Offset? contentOrigin;
-  double? contentWidth;
-  if (box != null && box.hasSize) {
-    contentOrigin = box.localToGlobal(Offset.zero);
-    contentWidth = box.size.width;
-  }
 
   late OverlayEntry entry;
   entry = OverlayEntry(builder: (ctx) => _TopToast(
     message: message,
     isError: isError,
     isDark: isDark,
-    contentOrigin: contentOrigin,
-    contentWidth: contentWidth,
     onDismiss: () => entry.remove(),
   ));
 
@@ -38,16 +26,12 @@ class _TopToast extends StatefulWidget {
   final String message;
   final bool isError;
   final bool isDark;
-  final Offset? contentOrigin;
-  final double? contentWidth;
   final VoidCallback onDismiss;
 
   const _TopToast({
     required this.message,
     required this.isError,
     required this.isDark,
-    this.contentOrigin,
-    this.contentWidth,
     required this.onDismiss,
   });
 
@@ -89,20 +73,8 @@ class _TopToastState extends State<_TopToast> with SingleTickerProviderStateMixi
     const titleBarH = 32.0;
     final topOffset = hasSidebar ? titleBarH + 12 : MediaQuery.of(context).padding.top + 12;
 
-    double left;
-    double right;
-
-    if (widget.contentOrigin != null && widget.contentWidth != null) {
-      // Use actual content area bounds — most accurate.
-      left = widget.contentOrigin!.dx;
-      right = screenWidth - widget.contentOrigin!.dx - widget.contentWidth!;
-    } else if (hasSidebar) {
-      left = _sidebarWidth;
-      right = 0;
-    } else {
-      left = 16;
-      right = 16;
-    }
+    final double left = hasSidebar ? _sidebarWidth : 16;
+    final double right = hasSidebar ? 0 : 16;
 
     return Positioned(
       top: topOffset,
