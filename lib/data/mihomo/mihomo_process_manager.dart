@@ -110,6 +110,10 @@ class MihomoProcessManager {
   Future<bool> start(String yaml) async {
     if (_isRunning) return true;
 
+    // Kill any leftover mihomo processes from previous runs to avoid port
+    // conflicts and zombie processes.
+    await _killStaleProcesses();
+
     final binary = await ensureBinary();
     if (binary == null) {
       _statusController.add('error');
@@ -165,24 +169,54 @@ class MihomoProcessManager {
 
   Future<bool> stop() async {
     if (!_isRunning || _process == null) return true;
+
+    final pid = _process!.pid;
     try {
-      _process!.kill(ProcessSignal.sigterm);
+      // On Windows, sigterm is often ignored; use taskkill /F for a clean kill.
+      if (Platform.isWindows) {
+        await Process.run('taskkill', ['/F', '/PID', '$pid']);
+      } else {
+        _process!.kill(ProcessSignal.sigterm);
+      }
       await _process!.exitCode.timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 3),
         onTimeout: () {
-          _process!.kill(ProcessSignal.sigkill);
+          // Force kill if still alive.
+          try { _process?.kill(ProcessSignal.sigkill); } catch (_) {}
+          if (Platform.isWindows) {
+            Process.runSync('taskkill', ['/F', '/PID', '$pid']);
+          }
           return -1;
         },
       );
     } catch (_) {
-      try {
-        _process?.kill(ProcessSignal.sigkill);
-      } catch (_) {}
+      // Last resort: platform kill.
+      if (Platform.isWindows) {
+        try { Process.runSync('taskkill', ['/F', '/PID', '$pid']); } catch (_) {}
+      } else {
+        try { _process?.kill(ProcessSignal.sigkill); } catch (_) {}
+      }
     }
     _isRunning = false;
     _process = null;
     _statusController.add('stopped');
     return true;
+  }
+
+  /// Kill all stale mihomo processes that may have survived a previous crash
+  /// or incomplete stop(). Prevents port conflicts and zombie buildup.
+  Future<void> _killStaleProcesses() async {
+    try {
+      if (Platform.isWindows) {
+        await Process.run('taskkill', ['/F', '/IM', _binaryName()]);
+      } else {
+        await Process.run('pkill', ['-9', '-f', _binaryName()]);
+      }
+      // Give OS a moment to release the ports.
+      await Future.delayed(const Duration(milliseconds: 500));
+    } catch (_) {
+      // Ignore errors — no stale processes is fine.
+    }
   }
 
   void _onProcessExit() {
