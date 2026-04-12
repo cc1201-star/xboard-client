@@ -198,9 +198,21 @@ class MihomoService {
         return false;
       }
 
-      final apiReady = await _waitForClashApi();
+      // Wait for the Clash API to come online. Only then declare running —
+      // if mihomo crashes on startup the process exit handler will flip state
+      // to stopped before we get here.
+      final apiReady = await _waitForClashApi(maxRetries: 20);
       if (!apiReady) {
-        debugPrint('Warning: Clash API not ready after timeout');
+        // Process likely crashed. Collect last log lines if available.
+        final lastLogs = _state.logs.isNotEmpty
+            ? _state.logs.last
+            : 'Clash API 未响应';
+        if (_isDesktop) await _processManager!.stop();
+        _emit(_state.copyWith(
+          status: MihomoStatus.error,
+          errorMessage: 'mihomo 启动失败: $lastLogs',
+        ));
+        return false;
       }
 
       _emit(_state.copyWith(status: MihomoStatus.running));

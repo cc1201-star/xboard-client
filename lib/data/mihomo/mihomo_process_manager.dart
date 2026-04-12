@@ -129,7 +129,9 @@ class MihomoProcessManager {
       );
 
       _isRunning = true;
-      _statusController.add('started');
+      // Don't emit 'started' yet — let MihomoService verify the Clash API
+      // is responsive before declaring success. If the process crashes
+      // immediately, _onProcessExit will emit 'stopped'.
 
       _process!.stdout
           .transform(utf8.decoder)

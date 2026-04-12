@@ -84,36 +84,30 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
 
     setState(() => _pendingNodeName = name);
     try {
-      // Always fetch config and (re)start mihomo to ensure a clean connection.
-      // Don't trust vpn.isConnected — it may be stale.
       var config = ref.read(subscriptionProvider).mihomoConfig;
       if (config == null || config.isEmpty) {
-        _toast('正在获取订阅配置...');
         await subNotifier.fetchMihomoConfig();
         config = ref.read(subscriptionProvider).mihomoConfig;
       }
       if (config == null || config.isEmpty) {
-        _toast('获取订阅配置失败，请检查网络或服务器地址', isError: true);
+        _toast('获取订阅配置失败', isError: true);
         return;
       }
 
-      // Stop existing connection if any, then reconnect fresh.
       if (vpn.isConnected) {
         await notifier.disconnect();
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 300));
       }
 
-      _toast('正在连接...');
       await notifier.connect(config);
 
-      // Wait for mihomo to come online.
-      var connected = false;
-      for (var i = 0; i < 15; i++) {
+      // Wait for actual connection (Clash API verified).
+      for (var i = 0; i < 20; i++) {
         await Future.delayed(const Duration(milliseconds: 500));
         final cur = ref.read(vpnStateProvider);
         if (cur.isConnected) {
-          connected = true;
-          break;
+          await notifier.selectNode(_primaryProxyGroup, name);
+          return; // Card will auto-update to 在线 via ref.watch
         }
         if (cur.errorMessage != null) {
           _toast(cur.errorMessage!, isError: true);
@@ -121,15 +115,8 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         }
       }
 
-      if (!connected) {
-        final err = ref.read(vpnStateProvider).errorMessage;
-        _toast(err ?? '连接超时，mihomo 启动失败', isError: true);
-        return;
-      }
-
-      // Switch to the selected node via Clash API.
-      await notifier.selectNode(_primaryProxyGroup, name);
-      _toast('已连接到 $name');
+      final err = ref.read(vpnStateProvider).errorMessage;
+      _toast(err ?? '连接超时', isError: true);
     } catch (e) {
       _toast('连接失败: $e', isError: true);
     } finally {
