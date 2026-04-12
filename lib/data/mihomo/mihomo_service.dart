@@ -266,14 +266,46 @@ class MihomoService {
     return start(rawConfig);
   }
 
-  /// Find the primary Selector proxy group (the one that is NOT 'GLOBAL',
-  /// '自动选择', '故障转移', etc.). Falls back to the first Selector group.
+  /// Find the Selector proxy group that contains [proxyName].
+  /// If no match, returns the first Selector group that has real proxies.
+  String? findGroupFor(String proxyName) {
+    // 1. Exact match: find a Selector that has this proxy in its 'all' list.
+    for (final g in _state.proxyGroups) {
+      if (g.type == 'Selector' && g.name != 'GLOBAL' && g.all.contains(proxyName)) {
+        return g.name;
+      }
+    }
+    // 2. Fuzzy match: proxy name might differ slightly.
+    for (final g in _state.proxyGroups) {
+      if (g.type == 'Selector' && g.name != 'GLOBAL') {
+        if (g.all.any((p) => p.contains(proxyName) || proxyName.contains(p))) {
+          return g.name;
+        }
+      }
+    }
+    // 3. Fallback: first Selector with real (non-group) proxies.
+    final groupNames = _state.proxyGroups.map((g) => g.name).toSet();
+    for (final g in _state.proxyGroups) {
+      if (g.type == 'Selector' && g.name != 'GLOBAL') {
+        if (g.all.any((p) => !groupNames.contains(p) && p != 'DIRECT' && p != 'REJECT')) {
+          return g.name;
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Shortcut: first non-GLOBAL Selector that has real proxies.
   String? get primaryGroup {
-    final selectors = _state.proxyGroups
-        .where((g) => g.type == 'Selector' && g.name != 'GLOBAL')
-        .toList();
-    if (selectors.isEmpty) return null;
-    return selectors.first.name;
+    final groupNames = _state.proxyGroups.map((g) => g.name).toSet();
+    for (final g in _state.proxyGroups) {
+      if (g.type == 'Selector' && g.name != 'GLOBAL') {
+        if (g.all.any((p) => !groupNames.contains(p) && p != 'DIRECT' && p != 'REJECT')) {
+          return g.name;
+        }
+      }
+    }
+    return null;
   }
 
   /// Returns null on success, or an error message on failure.

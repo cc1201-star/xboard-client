@@ -130,17 +130,17 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
       // Explicitly load proxy groups (start() may not have finished this).
       await notifier.refreshProxies();
 
-      final group = notifier.primaryGroup;
+      // Find the proxy group that contains this node.
+      final group = notifier.findGroupFor(name);
       if (group == null) {
-        _toast('未找到代理组，请检查订阅配置', isError: true);
+        _toast('未找到包含该节点的代理组，请检查订阅配置', isError: true);
         return;
       }
 
-      // Find the correct proxy name from the Clash API proxy group.
+      // Use the exact proxy name from the group's all list.
       final vpnState = ref.read(vpnStateProvider);
       final groupInfo = vpnState.proxyGroups
-          .where((g) => g.name == group)
-          .firstOrNull;
+          .where((g) => g.name == group).firstOrNull;
       String proxyName = name;
       if (groupInfo != null && !groupInfo.all.contains(name)) {
         final match = groupInfo.all.where((p) =>

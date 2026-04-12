@@ -130,6 +130,9 @@ class VpnNotifier extends StateNotifier<VpnState> {
   /// The primary Selector proxy group name discovered from mihomo runtime.
   String? get primaryGroup => _mihomo.primaryGroup;
 
+  /// Find the Selector group that contains a specific proxy node.
+  String? findGroupFor(String proxyName) => _mihomo.findGroupFor(proxyName);
+
   /// Returns null on success, or an error message on failure.
   Future<String?> selectNode(String group, String proxyName) async {
     return _mihomo.selectProxy(group, proxyName);

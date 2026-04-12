@@ -365,21 +365,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (ref.read(vpnStateProvider).isConnected) break;
               }
               if (!mounted || !ref.read(vpnStateProvider).isConnected) return;
-              // Load proxy groups and auto-select first real proxy node.
+              // Load proxy groups and verify proxy works.
               await n.refreshProxies();
-              final group = n.primaryGroup;
-              if (group == null) return;
-              final groupInfo = ref.read(vpnStateProvider).proxyGroups
-                  .where((g) => g.name == group).firstOrNull;
-              final groupNames = ref.read(vpnStateProvider).proxyGroups
-                  .map((g) => g.name).toSet();
-              final realProxies = groupInfo?.all
-                  .where((p) => p != 'DIRECT' && p != 'REJECT'
-                      && !groupNames.contains(p))
-                  .toList() ?? [];
-              if (realProxies.isNotEmpty) {
-                final nodeName = realProxies.first;
-                await n.selectNode(group, nodeName);
+              final proxies = ref.read(vpnStateProvider).proxies;
+              if (proxies.isNotEmpty) {
+                final nodeName = proxies.first.name;
+                final group = n.findGroupFor(nodeName);
+                if (group != null) {
+                  await n.selectNode(group, nodeName);
+                }
                 final delay = await n.testDelay(nodeName);
                 if (!mounted) return;
                 if (delay < 0) {
