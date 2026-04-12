@@ -127,7 +127,8 @@ class VpnNotifier extends StateNotifier<VpnState> {
     await _mihomo.stop();
   }
 
-  Future<bool> selectNode(String group, String proxyName) async {
+  /// Returns null on success, or an error message on failure.
+  Future<String?> selectNode(String group, String proxyName) async {
     return _mihomo.selectProxy(group, proxyName);
   }
 

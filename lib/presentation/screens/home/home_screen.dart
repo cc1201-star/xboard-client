@@ -372,8 +372,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               final proxies = ref.read(vpnStateProvider).proxies;
               if (proxies.isNotEmpty) {
                 final nodeName = proxies.first.name;
-                final selected = await n.selectNode('XBoard', nodeName);
-                if (selected && mounted) {
+                final selectErr = await n.selectNode('XBoard', nodeName);
+                if (selectErr == null && mounted) {
                   final delay = await n.testDelay(nodeName);
                   if (!mounted) return;
                   if (delay < 0) {

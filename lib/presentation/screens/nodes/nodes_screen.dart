@@ -118,15 +118,9 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         await Future.delayed(const Duration(milliseconds: 500));
         final cur = ref.read(vpnStateProvider);
         if (cur.isConnected) {
-          final selected = await notifier.selectNode(_primaryProxyGroup, name);
-          if (!selected) {
-            // Read logs for the actual error
-            final vpnLogs = ref.read(vpnStateProvider).logs;
-            final errLog = vpnLogs.reversed
-                .where((l) => l.contains('[ERROR]'))
-                .take(2)
-                .join('\n');
-            _toast('切换节点失败: ${errLog.isNotEmpty ? errLog : "未知错误"}', isError: true);
+          final selectErr = await notifier.selectNode(_primaryProxyGroup, name);
+          if (selectErr != null) {
+            _toast('切换节点失败: $selectErr', isError: true);
             return;
           }
           // Verify the proxy actually works by testing delay.
