@@ -340,11 +340,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             if (vpn.isConnected) {
               n.disconnect();
             } else {
-              // Fetch mihomo (Clash.Meta) YAML config, then connect
-              final subState = ref.read(subscriptionProvider);
-              String? config = subState.mihomoConfig;
+              // Ensure subscription info is loaded, then fetch mihomo config.
+              final subNotifier = ref.read(subscriptionProvider.notifier);
+              if (ref.read(subscriptionProvider).info?.subscribeUrl == null) {
+                await subNotifier.fetchSubscription();
+              }
+              String? config = ref.read(subscriptionProvider).mihomoConfig;
               if (config == null || config.isEmpty) {
-                await ref.read(subscriptionProvider.notifier).fetchMihomoConfig();
+                await subNotifier.fetchMihomoConfig();
                 config = ref.read(subscriptionProvider).mihomoConfig;
               }
               if (config == null || config.isEmpty) {

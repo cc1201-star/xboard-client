@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
+import 'package:xboard_client/core/constants/app_constants.dart';
 import 'package:xboard_client/data/mihomo/clash_api_client.dart';
 import 'package:xboard_client/data/mihomo/mihomo_config_builder.dart';
 import 'package:xboard_client/data/mihomo/mihomo_platform_channel.dart';
 import 'package:xboard_client/data/mihomo/mihomo_process_manager.dart';
+import 'package:xboard_client/data/mihomo/system_proxy.dart';
 
 enum MihomoStatus { stopped, starting, running, stopping, error }
 
@@ -229,6 +231,12 @@ class MihomoService {
       _onLog('[INFO] 发现 ${proxyNames.length} 个代理节点: $proxyNames');
       _onLog('[INFO] 发现 ${groupNames.length} 个代理组: $groupNames');
 
+      // Set system proxy on desktop so all traffic goes through mihomo.
+      if (_isDesktop) {
+        await SystemProxy.enable(AppConstants.mixedPort);
+        _onLog('[INFO] 系统代理已设置 → 127.0.0.1:${AppConstants.mixedPort}');
+      }
+
       return true;
     } catch (e) {
       _emit(_state.copyWith(
@@ -244,6 +252,11 @@ class MihomoService {
 
     _emit(_state.copyWith(status: MihomoStatus.stopping));
     _stopMonitoring();
+
+    // Restore system proxy before stopping mihomo.
+    if (_isDesktop) {
+      await SystemProxy.disable();
+    }
 
     try {
       await _clashApi.closeAllConnections();

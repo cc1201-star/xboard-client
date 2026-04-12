@@ -335,16 +335,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     ));
 
   Widget _submitBtn(String text, VoidCallback onTap) => SizedBox(width: 160, height: 42,
-    child: ElevatedButton(
-      onPressed: _isLoading ? null : onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _colors[_colorIndex], foregroundColor: Colors.white,
-        disabledBackgroundColor: _colors[_colorIndex].withValues(alpha: 0.6),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+    child: AnimatedContainer(
+      duration: const Duration(seconds: 1),
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        color: _isLoading ? _colors[_colorIndex].withValues(alpha: 0.6) : _colors[_colorIndex],
+        borderRadius: BorderRadius.circular(30),
       ),
-      child: _isLoading
-          ? const Text('...', style: TextStyle(fontSize: 14, color: Colors.white))
-          : Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isLoading ? null : onTap,
+          borderRadius: BorderRadius.circular(30),
+          child: Center(child: _isLoading
+              ? const Text('...', style: TextStyle(fontSize: 14, color: Colors.white))
+              : Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1, color: Colors.white)),
+          ),
+        ),
+      ),
     ));
 }
 

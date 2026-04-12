@@ -67,8 +67,12 @@ class _TopToastState extends State<_TopToast> with SingleTickerProviderStateMixi
     final hasSidebar = screenWidth >= _mobileBreakpoint;
     final sidebarOffset = hasSidebar ? _sidebarWidth : 0.0;
 
+    // Title bar height on desktop (see CustomTitleBar).
+    const titleBarH = 32.0;
+    final topOffset = hasSidebar ? titleBarH + 12 : MediaQuery.of(context).padding.top + 12;
+
     return Positioned(
-      top: MediaQuery.of(context).padding.top + 16,
+      top: topOffset,
       left: sidebarOffset + _contentPadding,
       right: _contentPadding,
       child: SlideTransition(
