@@ -373,15 +373,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               await n.refreshProxies();
 
               // Find and select a real proxy node.
-              // Use mihomoProxies (direct read) to avoid stream delay.
-              final proxies = n.mihomoProxies;
-              final group = proxies.isNotEmpty
-                  ? n.findGroupFor(proxies.first.name) ?? n.primaryGroup
-                  : n.primaryGroup;
+              // Skip info nodes injected by the panel (e.g. "剩余流量：…",
+              // "套餐到期：…") — they sit at the front of the proxy list
+              // but aren't real server nodes.
+              final group = n.primaryGroup;
               String? testNode;
-              if (group != null && proxies.isNotEmpty) {
-                testNode = proxies.first.name;
-                await n.selectNode(group, testNode);
+              if (group != null) {
+                final vpnState = ref.read(vpnStateProvider);
+                final groupInfo = vpnState.proxyGroups
+                    .where((g) => g.name == group)
+                    .firstOrNull;
+                if (groupInfo != null) {
+                  // The proxy group's all list mirrors the Clash config
+                  // ordering.  Pick the first member that is a real proxy
+                  // (exists in the proxies list), skipping sub-groups and
+                  // info nodes whose names contain Chinese punctuation
+                  // patterns like "：" that real server names don't have.
+                  final proxyNames =
+                      vpnState.proxies.map((p) => p.name).toSet();
+                  const infoPatterns = ['剩余流量', '套餐到期', '过滤掉', '距离下次重置'];
+                  for (final member in groupInfo.all) {
+                    if (!proxyNames.contains(member)) continue;
+                    if (infoPatterns.any((p) => member.contains(p))) continue;
+                    testNode = member;
+                    break;
+                  }
+                  // Fallback: use the group's current selection if our
+                  // filter found nothing.
+                  testNode ??= groupInfo.now;
+                }
+                if (testNode != null) {
+                  await n.selectNode(group, testNode);
+                }
               }
               testNode ??= ref.read(vpnStateProvider).currentNode;
               if (testNode == null) return;
