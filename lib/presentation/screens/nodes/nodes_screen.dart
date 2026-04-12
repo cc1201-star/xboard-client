@@ -71,41 +71,67 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
     final name = node['name'] as String? ?? '';
     if (name.isEmpty) return;
 
-    final vpn = ref.read(vpnStateProvider);
     final notifier = ref.read(vpnStateProvider.notifier);
     final subNotifier = ref.read(subscriptionProvider.notifier);
-    final isCurrent = vpn.currentNode == name && vpn.isConnected;
+    final vpn = ref.read(vpnStateProvider);
 
     // Tapping the currently active node → disconnect.
-    if (isCurrent) {
+    if (vpn.currentNode == name && vpn.isConnected) {
       await notifier.disconnect();
+      _toast('已断开');
       return;
     }
 
     setState(() => _pendingNodeName = name);
     try {
-      // Ensure mihomo is running. If not, start it first.
-      if (!vpn.isConnected) {
-        var config = ref.read(subscriptionProvider).mihomoConfig;
-        if (config == null || config.isEmpty) {
-          await subNotifier.fetchMihomoConfig();
-          config = ref.read(subscriptionProvider).mihomoConfig;
+      // Always fetch config and (re)start mihomo to ensure a clean connection.
+      // Don't trust vpn.isConnected — it may be stale.
+      var config = ref.read(subscriptionProvider).mihomoConfig;
+      if (config == null || config.isEmpty) {
+        _toast('正在获取订阅配置...');
+        await subNotifier.fetchMihomoConfig();
+        config = ref.read(subscriptionProvider).mihomoConfig;
+      }
+      if (config == null || config.isEmpty) {
+        _toast('获取订阅配置失败，请检查网络或服务器地址', isError: true);
+        return;
+      }
+
+      // Stop existing connection if any, then reconnect fresh.
+      if (vpn.isConnected) {
+        await notifier.disconnect();
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      _toast('正在连接...');
+      await notifier.connect(config);
+
+      // Wait for mihomo to come online.
+      var connected = false;
+      for (var i = 0; i < 15; i++) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        final cur = ref.read(vpnStateProvider);
+        if (cur.isConnected) {
+          connected = true;
+          break;
         }
-        if (config == null || config.isEmpty) {
-          _toast('获取订阅配置失败', isError: true);
+        if (cur.errorMessage != null) {
+          _toast(cur.errorMessage!, isError: true);
           return;
-        }
-        await notifier.connect(config);
-        // After start, the vpn notifier's state updates via stream.
-        // We still may need to wait a beat for the Clash API to come online
-        // before selectNode works.
-        for (var i = 0; i < 10; i++) {
-          if (ref.read(vpnStateProvider).isConnected) break;
-          await Future.delayed(const Duration(milliseconds: 300));
         }
       }
 
+      if (!connected) {
+        final err = ref.read(vpnStateProvider).errorMessage;
+        _toast(err ?? '连接超时，mihomo 启动失败', isError: true);
+        return;
+      }
+
+      // Switch to the selected node via Clash API.
       await notifier.selectNode(_primaryProxyGroup, name);
+      _toast('已连接到 $name');
+    } catch (e) {
+      _toast('连接失败: $e', isError: true);
     } finally {
       if (mounted) setState(() => _pendingNodeName = null);
     }
