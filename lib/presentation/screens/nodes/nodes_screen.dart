@@ -87,6 +87,10 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
     try {
       var config = ref.read(subscriptionProvider).mihomoConfig;
       if (config == null || config.isEmpty) {
+        // Ensure subscription info (including subscribeUrl) is loaded first.
+        if (ref.read(subscriptionProvider).info?.subscribeUrl == null) {
+          await subNotifier.fetchSubscription();
+        }
         await subNotifier.fetchMihomoConfig();
         config = ref.read(subscriptionProvider).mihomoConfig;
       }
