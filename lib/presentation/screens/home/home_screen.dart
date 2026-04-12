@@ -56,8 +56,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final rawTotal = info?.transferEnable ?? user?.transferEnable ?? 0;
     final pkgTrafficTotal = pkgStats.totalBytes;
     final pkgUsedTotal = pkgStats.usedBytes;
-    final totalTraffic = (rawTotal - pkgTrafficTotal).clamp(0, rawTotal);
-    final usedTraffic = (totalUsed - pkgUsedTotal).clamp(0, totalTraffic);
+    final totalTraffic = (rawTotal - pkgTrafficTotal).clamp(0, rawTotal).toInt();
+    final usedTraffic = (totalUsed - pkgUsedTotal).clamp(0, totalTraffic).toInt();
     final pct = totalTraffic > 0 ? (usedTraffic / totalTraffic * 100).clamp(0, 100).toDouble() : 0.0;
     final pkgTotal = pkgTrafficTotal;
     final pkgUsed = pkgUsedTotal;
