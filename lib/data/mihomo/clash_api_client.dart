@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:xboard_client/core/constants/app_constants.dart';
@@ -27,15 +28,14 @@ class ClashApiClient {
   }
 
   Future<Map<String, int>> getTraffic() async {
+    // Fallback: use /connections to compute approximate speed.
     try {
-      final resp = await _dio.get('/traffic');
-      if (resp.data is Map) {
-        return {
-          'up': (resp.data['up'] as num?)?.toInt() ?? 0,
-          'down': (resp.data['down'] as num?)?.toInt() ?? 0,
-        };
-      }
-      return {'up': 0, 'down': 0};
+      final resp = await _dio.get('/connections');
+      final data = resp.data as Map<String, dynamic>? ?? {};
+      return {
+        'up': (data['uploadTotal'] as num?)?.toInt() ?? 0,
+        'down': (data['downloadTotal'] as num?)?.toInt() ?? 0,
+      };
     } catch (_) {
       return {'up': 0, 'down': 0};
     }
@@ -131,21 +131,88 @@ class ClashApiClient {
     }
   }
 
+  /// Subscribe to mihomo's streaming /traffic endpoint for real-time speed.
+  StreamSubscription<List<int>>? _trafficStreamSub;
+
   Stream<Map<String, int>> watchTraffic({
     Duration interval = const Duration(seconds: 1),
   }) {
     final controller = StreamController<Map<String, int>>();
-    _trafficTimer?.cancel();
-    _trafficTimer = Timer.periodic(interval, (_) async {
-      if (controller.isClosed) {
-        _trafficTimer?.cancel();
-        return;
-      }
-      final traffic = await getTraffic();
-      if (!controller.isClosed) controller.add(traffic);
-    });
-    controller.onCancel = () => _trafficTimer?.cancel();
+
+    // Try the streaming /traffic endpoint first.
+    _connectTrafficStream(controller);
+
+    controller.onCancel = () {
+      _trafficStreamSub?.cancel();
+      _trafficStreamSub = null;
+      _trafficTimer?.cancel();
+    };
     return controller.stream;
+  }
+
+  void _connectTrafficStream(StreamController<Map<String, int>> controller) {
+    final streamDio = Dio(BaseOptions(
+      baseUrl: 'http://${AppConstants.clashApiHost}:${AppConstants.clashApiPort}',
+    ));
+
+    streamDio.get<ResponseBody>(
+      '/traffic',
+      options: Options(responseType: ResponseType.stream),
+    ).then((resp) {
+      final stream = resp.data!.stream;
+      String buffer = '';
+      _trafficStreamSub = stream.listen(
+        (chunk) {
+          buffer += utf8.decode(chunk);
+          // /traffic sends newline-delimited JSON: {"up":123,"down":456}\n
+          while (buffer.contains('\n')) {
+            final idx = buffer.indexOf('\n');
+            final line = buffer.substring(0, idx).trim();
+            buffer = buffer.substring(idx + 1);
+            if (line.isEmpty) continue;
+            try {
+              final json = jsonDecode(line) as Map<String, dynamic>;
+              if (!controller.isClosed) {
+                controller.add({
+                  'up': (json['up'] as num?)?.toInt() ?? 0,
+                  'down': (json['down'] as num?)?.toInt() ?? 0,
+                });
+              }
+            } catch (_) {}
+          }
+        },
+        onError: (_) {
+          // Stream broke — fall back to polling.
+          _fallbackToPolling(controller);
+        },
+        onDone: () {
+          if (!controller.isClosed) _fallbackToPolling(controller);
+        },
+        cancelOnError: true,
+      );
+    }).catchError((_) {
+      // Streaming not available — fall back to polling.
+      _fallbackToPolling(controller);
+    });
+  }
+
+  void _fallbackToPolling(StreamController<Map<String, int>> controller) {
+    int lastUp = 0, lastDown = 0;
+    _trafficTimer?.cancel();
+    _trafficTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      if (controller.isClosed) { _trafficTimer?.cancel(); return; }
+      final totals = await getTraffic();
+      final up = totals['up'] ?? 0;
+      final down = totals['down'] ?? 0;
+      // Convert totals to per-second speed.
+      if (lastUp > 0 || lastDown > 0) {
+        final speedUp = (up - lastUp).clamp(0, 1 << 30);
+        final speedDown = (down - lastDown).clamp(0, 1 << 30);
+        if (!controller.isClosed) controller.add({'up': speedUp, 'down': speedDown});
+      }
+      lastUp = up;
+      lastDown = down;
+    });
   }
 
   void dispose() {

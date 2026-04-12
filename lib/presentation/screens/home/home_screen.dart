@@ -368,22 +368,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (ref.read(vpnStateProvider).isConnected) break;
               }
               if (!mounted || !ref.read(vpnStateProvider).isConnected) return;
-              // Load proxy groups and verify proxy works.
-              await n.refreshProxies();
-              final proxies = ref.read(vpnStateProvider).proxies;
-              if (proxies.isNotEmpty) {
-                final nodeName = proxies.first.name;
-                final group = n.findGroupFor(nodeName);
-                if (group != null) {
-                  await n.selectNode(group, nodeName);
-                }
-                final delay = await n.testDelay(nodeName);
-                if (!mounted) return;
-                if (delay < 0) {
-                  showTopToast(context, '已连接但代理不通，请检查网络或防火墙', isError: true);
-                } else {
-                  showTopToast(context, '已连接到 $nodeName（${delay}ms）');
-                }
+
+              // start() already called refreshProxies() which auto-detects
+              // the selected node from the proxy group chain. Read it directly.
+              final currentNode = ref.read(vpnStateProvider).currentNode;
+              final testNode = currentNode
+                  ?? ref.read(vpnStateProvider).proxies.firstOrNull?.name;
+              if (testNode == null) return;
+
+              // Verify the proxy actually works (retry once on first launch).
+              var delay = await n.testDelay(testNode);
+              if (delay < 0) {
+                await Future.delayed(const Duration(seconds: 2));
+                delay = await n.testDelay(testNode);
+              }
+              if (!mounted) return;
+              if (delay < 0) {
+                showTopToast(context, '已连接但代理不通，请检查网络或防火墙', isError: true);
+              } else {
+                showTopToast(context, '已连接到 $testNode（${delay}ms）');
               }
             }
           },

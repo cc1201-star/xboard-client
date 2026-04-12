@@ -154,8 +154,12 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         return;
       }
 
-      // Verify the proxy actually works.
-      final delay = await notifier.testDelay(proxyName);
+      // Verify the proxy actually works (retry once — mihomo may still be warming up).
+      var delay = await notifier.testDelay(proxyName);
+      if (delay < 0) {
+        await Future.delayed(const Duration(seconds: 2));
+        delay = await notifier.testDelay(proxyName);
+      }
       if (delay < 0) {
         _toast('已连接到 $name，但代理不通（测速超时），请检查网络或防火墙', isError: true);
         return;

@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 /// Sidebar width used in ShellScreen — keep in sync.
 const _sidebarWidth = 256.0;
 const _mobileBreakpoint = 1024.0;
-/// Match the content area's padding (NodesScreen uses EdgeInsets.all(32)).
+/// Match the content area's padding (pages use EdgeInsets.all(32)).
 const _contentPadding = 32.0;
+/// Account for desktop scrollbar width so Toast matches card width.
+const _scrollbarWidth = 14.0;
 
 /// Show a toast-style message at the top of the **content area** (avoids
 /// overlapping the sidebar). Width adapts dynamically to the window size.
@@ -71,10 +73,14 @@ class _TopToastState extends State<_TopToast> with SingleTickerProviderStateMixi
     const titleBarH = 32.0;
     final topOffset = hasSidebar ? titleBarH + 12 : MediaQuery.of(context).padding.top + 12;
 
+    final rightPad = hasSidebar
+        ? _contentPadding + _scrollbarWidth // desktop: match card width inside scrollable area
+        : _contentPadding;
+
     return Positioned(
       top: topOffset,
       left: sidebarOffset + _contentPadding,
-      right: _contentPadding,
+      right: rightPad,
       child: SlideTransition(
         position: _slide,
         child: Material(
