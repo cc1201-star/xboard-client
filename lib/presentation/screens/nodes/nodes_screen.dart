@@ -197,11 +197,31 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
   void _toast(String msg, {bool isError = false}) {
     if (!mounted) return;
     final scaffold = ScaffoldMessenger.maybeOf(context);
-    scaffold?.showSnackBar(
+    if (scaffold == null) return;
+    scaffold.clearSnackBars();
+    final screenH = MediaQuery.of(context).size.height;
+    scaffold.showSnackBar(
       SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? Colors.red.shade700 : null,
-        duration: const Duration(seconds: 3),
+        content: Text(
+          msg,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ),
+        ),
+        backgroundColor:
+            isError ? Colors.red.shade600 : const Color(0xFF10B981),
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom: screenH - 120,
+          left: 24,
+          right: 24,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
