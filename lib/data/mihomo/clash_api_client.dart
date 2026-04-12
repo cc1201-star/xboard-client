@@ -51,7 +51,10 @@ class ClashApiClient {
 
   Future<bool> selectProxy(String group, String proxyName) async {
     try {
-      final resp = await _dio.put('/proxies/$group', data: {'name': proxyName});
+      final resp = await _dio.put(
+        '/proxies/${Uri.encodeComponent(group)}',
+        data: {'name': proxyName},
+      );
       return resp.statusCode == 204 || resp.statusCode == 200;
     } catch (_) {
       return false;
@@ -61,11 +64,11 @@ class ClashApiClient {
   Future<int> getProxyDelay(
     String proxyName, {
     String testUrl = 'https://www.gstatic.com/generate_204',
-    int timeout = 3000,
+    int timeout = 5000,
   }) async {
     try {
       final resp = await _dio.get(
-        '/proxies/$proxyName/delay',
+        '/proxies/${Uri.encodeComponent(proxyName)}/delay',
         queryParameters: {'url': testUrl, 'timeout': timeout},
       );
       return (resp.data['delay'] as num?)?.toInt() ?? -1;

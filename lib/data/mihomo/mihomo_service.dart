@@ -201,6 +201,7 @@ class MihomoService {
       // Wait for the Clash API to come online. Only then declare running —
       // if mihomo crashes on startup the process exit handler will flip state
       // to stopped before we get here.
+      _onLog('[INFO] 等待 Clash API 就绪...');
       final apiReady = await _waitForClashApi(maxRetries: 20);
       if (!apiReady) {
         // Process likely crashed. Collect last log lines if available.
@@ -215,9 +216,19 @@ class MihomoService {
         return false;
       }
 
+      final version = await _clashApi.getVersion();
+      _onLog('[INFO] Clash API 就绪，mihomo 版本: $version');
+
       _emit(_state.copyWith(status: MihomoStatus.running));
       _startMonitoring();
       await refreshProxies();
+
+      // Log discovered proxies for debugging
+      final proxyNames = _state.proxies.map((p) => p.name).toList();
+      final groupNames = _state.proxyGroups.map((g) => '${g.name}(${g.type},now:${g.now})').toList();
+      _onLog('[INFO] 发现 ${proxyNames.length} 个代理节点: $proxyNames');
+      _onLog('[INFO] 发现 ${groupNames.length} 个代理组: $groupNames');
+
       return true;
     } catch (e) {
       _emit(_state.copyWith(

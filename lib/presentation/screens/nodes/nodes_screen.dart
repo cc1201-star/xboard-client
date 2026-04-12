@@ -118,8 +118,18 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         await Future.delayed(const Duration(milliseconds: 500));
         final cur = ref.read(vpnStateProvider);
         if (cur.isConnected) {
-          await notifier.selectNode(_primaryProxyGroup, name);
-          _toast('已连接到 $name');
+          final selected = await notifier.selectNode(_primaryProxyGroup, name);
+          if (!selected) {
+            _toast('切换节点失败，请检查订阅配置', isError: true);
+            return;
+          }
+          // Verify the proxy actually works by testing delay.
+          final delay = await notifier.testDelay(name);
+          if (delay < 0) {
+            _toast('已连接到 $name，但代理不通（测速超时），请检查网络或防火墙', isError: true);
+            return;
+          }
+          _toast('已连接到 $name（${delay}ms）');
           return;
         }
         if (cur.errorMessage != null) {

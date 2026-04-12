@@ -9,6 +9,7 @@ import 'package:xboard_client/presentation/providers/package_stats_provider.dart
 import 'package:xboard_client/presentation/providers/subscription_provider.dart';
 import 'package:xboard_client/presentation/providers/user_provider.dart';
 import 'package:xboard_client/presentation/providers/vpn_state_provider.dart';
+import 'package:xboard_client/presentation/widgets/top_toast.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -346,8 +347,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 await ref.read(subscriptionProvider.notifier).fetchMihomoConfig();
                 config = ref.read(subscriptionProvider).mihomoConfig;
               }
-              if (config != null && config.isNotEmpty) {
-                n.connect(config);
+              if (config == null || config.isEmpty) {
+                if (mounted) showTopToast(context, '获取订阅配置失败', isError: true);
+                return;
+              }
+              final ok = await n.connect(config);
+              if (!ok) {
+                if (mounted) {
+                  final err = ref.read(vpnStateProvider).errorMessage;
+                  showTopToast(context, err ?? '启动 mihomo 失败', isError: true);
+                }
+                return;
+              }
+              // Wait for Clash API ready
+              for (var i = 0; i < 20; i++) {
+                await Future.delayed(const Duration(milliseconds: 500));
+                if (ref.read(vpnStateProvider).isConnected) break;
+              }
+              if (!ref.read(vpnStateProvider).isConnected) {
+                if (mounted) showTopToast(context, '连接超时', isError: true);
+                return;
+              }
+              // Auto-select the first real proxy node and verify
+              final proxies = ref.read(vpnStateProvider).proxies;
+              if (proxies.isNotEmpty) {
+                final nodeName = proxies.first.name;
+                final selected = await n.selectNode('XBoard', nodeName);
+                if (selected && mounted) {
+                  final delay = await n.testDelay(nodeName);
+                  if (!mounted) return;
+                  if (delay < 0) {
+                    showTopToast(context, '已连接但代理不通，请检查网络或防火墙', isError: true);
+                  } else {
+                    showTopToast(context, '已连接到 $nodeName（${delay}ms）');
+                  }
+                }
               }
             }
           },

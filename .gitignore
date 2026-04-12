@@ -44,7 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Bundled mihomo kernels (fetched by scripts/download-kernels.sh)
+# Bundled mihomo kernels and geo databases (fetched by scripts/download-kernels.sh)
 assets/bin/windows/mihomo.exe
 assets/bin/macos/mihomo-*
+assets/bin/geoip.dat
+assets/bin/geosite.dat
 android/app/src/main/jniLibs/*/libmihomo.so
