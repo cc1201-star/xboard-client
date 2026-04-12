@@ -273,7 +273,16 @@ class MihomoService {
 
     final proxies = <MihomoProxy>[];
     final groups = <MihomoProxyGroup>[];
-    String? selectedNode;
+
+    // First pass: collect group names so we can distinguish groups from proxies.
+    final groupNames = <String>{};
+    proxiesMap.forEach((name, value) {
+      if (value is! Map<String, dynamic>) return;
+      final type = value['type'] as String? ?? '';
+      if (type == 'Selector' || type == 'URLTest' || type == 'Fallback') {
+        groupNames.add(name);
+      }
+    });
 
     proxiesMap.forEach((name, value) {
       if (value is! Map<String, dynamic>) return;
@@ -291,7 +300,6 @@ class MihomoService {
           now: now,
           all: all,
         ));
-        if (selectedNode == null && now != null) selectedNode = now;
       } else if (type != 'Direct' && type != 'Reject' && type != 'Block') {
         proxies.add(MihomoProxy(
           name: name,
@@ -303,6 +311,18 @@ class MihomoService {
         ));
       }
     });
+
+    // Resolve the actually selected leaf proxy node by following the group
+    // chain. e.g. GLOBAL → XBoard → "美国直连". We need the leaf name so it
+    // matches the node card names in the UI.
+    String? selectedNode;
+    for (final g in groups) {
+      if (g.now != null && !groupNames.contains(g.now)) {
+        // This group's `now` points to an actual proxy, not another group.
+        selectedNode = g.now;
+        break;
+      }
+    }
 
     _emit(_state.copyWith(
       proxies: proxies,

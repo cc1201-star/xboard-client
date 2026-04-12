@@ -5,6 +5,7 @@ import 'package:xboard_client/core/theme/app_theme.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
 import 'package:xboard_client/presentation/providers/subscription_provider.dart';
 import 'package:xboard_client/presentation/providers/vpn_state_provider.dart';
+import 'package:xboard_client/presentation/widgets/top_toast.dart';
 
 /// Proxy-group name that the panel templates out (see ClashMeta.php template).
 /// This is the selector group we flip when the user taps a node card.
@@ -107,7 +108,8 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         final cur = ref.read(vpnStateProvider);
         if (cur.isConnected) {
           await notifier.selectNode(_primaryProxyGroup, name);
-          return; // Card will auto-update to 在线 via ref.watch
+          _toast('已连接到 $name');
+          return;
         }
         if (cur.errorMessage != null) {
           _toast(cur.errorMessage!, isError: true);
@@ -183,34 +185,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
 
   void _toast(String msg, {bool isError = false}) {
     if (!mounted) return;
-    final scaffold = ScaffoldMessenger.maybeOf(context);
-    if (scaffold == null) return;
-    scaffold.clearSnackBars();
-    final screenH = MediaQuery.of(context).size.height;
-    scaffold.showSnackBar(
-      SnackBar(
-        content: Text(
-          msg,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-          ),
-        ),
-        backgroundColor:
-            isError ? Colors.red.shade600 : const Color(0xFF10B981),
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(
-          bottom: screenH - 120,
-          left: 24,
-          right: 24,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    showTopToast(context, msg, isError: isError);
   }
 
   @override
