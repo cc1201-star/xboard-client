@@ -266,6 +266,16 @@ class MihomoService {
     return start(rawConfig);
   }
 
+  /// Find the primary Selector proxy group (the one that is NOT 'GLOBAL',
+  /// '自动选择', '故障转移', etc.). Falls back to the first Selector group.
+  String? get primaryGroup {
+    final selectors = _state.proxyGroups
+        .where((g) => g.type == 'Selector' && g.name != 'GLOBAL')
+        .toList();
+    if (selectors.isEmpty) return null;
+    return selectors.first.name;
+  }
+
   /// Returns null on success, or an error message on failure.
   Future<String?> selectProxy(String group, String proxyName) async {
     final result = await _clashApi.selectProxyWithError(group, proxyName);

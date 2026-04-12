@@ -7,9 +7,8 @@ import 'package:xboard_client/presentation/providers/subscription_provider.dart'
 import 'package:xboard_client/presentation/providers/vpn_state_provider.dart';
 import 'package:xboard_client/presentation/widgets/top_toast.dart';
 
-/// Proxy-group name that the panel templates out (see ClashMeta.php template).
-/// This is the selector group we flip when the user taps a node card.
-const _primaryProxyGroup = 'XBoard';
+// The primary proxy group name is discovered dynamically from mihomo runtime
+// (see VpnNotifier.primaryGroup). No longer hardcoded.
 
 class NodesScreen extends ConsumerStatefulWidget {
   const NodesScreen({super.key});
@@ -118,7 +117,12 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         await Future.delayed(const Duration(milliseconds: 500));
         final cur = ref.read(vpnStateProvider);
         if (cur.isConnected) {
-          final selectErr = await notifier.selectNode(_primaryProxyGroup, name);
+          final group = notifier.primaryGroup;
+          if (group == null) {
+            _toast('未找到可用的代理组，请检查订阅配置', isError: true);
+            return;
+          }
+          final selectErr = await notifier.selectNode(group, name);
           if (selectErr != null) {
             _toast('切换节点失败: $selectErr', isError: true);
             return;

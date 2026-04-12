@@ -370,9 +370,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               }
               // Auto-select the first real proxy node and verify
               final proxies = ref.read(vpnStateProvider).proxies;
-              if (proxies.isNotEmpty) {
+              final group = n.primaryGroup;
+              if (proxies.isNotEmpty && group != null) {
                 final nodeName = proxies.first.name;
-                final selectErr = await n.selectNode('XBoard', nodeName);
+                final selectErr = await n.selectNode(group, nodeName);
                 if (selectErr == null && mounted) {
                   final delay = await n.testDelay(nodeName);
                   if (!mounted) return;
