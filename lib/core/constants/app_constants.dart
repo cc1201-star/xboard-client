@@ -20,7 +20,7 @@ class AppConstants {
   static const String mihomoVersion = '1.19.14';
   static const String mihomoFlag = 'meta';
 
-  static const int clashApiPort = 9090;
+  static const int clashApiPort = 19853;
   static const String clashApiHost = '127.0.0.1';
   static const int socksPort = 2333;
   static const int mixedPort = 2334;
