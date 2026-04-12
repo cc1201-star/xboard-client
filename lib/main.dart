@@ -46,7 +46,7 @@ class _XboardAppState extends ConsumerState<XboardApp> with WindowListener {
     final router = ref.watch(routerProvider);
     final primaryColor = ref.watch(themeColorProvider);
 
-    return MaterialApp.router(
+    final app = MaterialApp.router(
       title: 'Xboard',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightThemeWith(primaryColor),
@@ -54,5 +54,12 @@ class _XboardAppState extends ConsumerState<XboardApp> with WindowListener {
       themeMode: ThemeMode.system,
       routerConfig: router,
     );
+
+    // On desktop the native title bar is hidden (TitleBarStyle.hidden) so we
+    // need DragToResizeArea to restore resize handles on all four edges.
+    if (!kIsWeb) {
+      return DragToResizeArea(child: app);
+    }
+    return app;
   }
 }

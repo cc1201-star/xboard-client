@@ -81,7 +81,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     setState(() { _isLoading = true; _error = null; });
     try {
       _saveSidebarColor(); // fire and forget，不 await
-      await ref.read(authStateProvider.notifier).login(AppConstants.serverUrl, account, password);
+      final serverUrl = ref.read(authStateProvider).baseUrl ?? AppConstants.defaultServerUrl;
+      await ref.read(authStateProvider.notifier).login(serverUrl, account, password);
       final s = ref.read(authStateProvider);
       if (s.isAuthenticated) return;
       if (mounted) setState(() { _isLoading = false; _error = s.error ?? '账号或密码错误'; });
@@ -98,7 +99,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     setState(() { _isLoading = true; _error = null; });
     try {
       _saveSidebarColor(); // fire and forget
-      await ref.read(authStateProvider.notifier).register(AppConstants.serverUrl, username, password);
+      final serverUrl = ref.read(authStateProvider).baseUrl ?? AppConstants.defaultServerUrl;
+      await ref.read(authStateProvider.notifier).register(serverUrl, username, password);
       final s = ref.read(authStateProvider);
       if (s.isAuthenticated) return;
       if (s.error != null) {
@@ -313,9 +315,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1)),
   );
 
-  Widget _input(TextEditingController c, String hint) => SizedBox(height: 40,
+  Widget _input(TextEditingController c, String hint, {IconData? icon}) => SizedBox(height: 40,
     child: TextField(controller: c, enabled: !_isLoading,
-      style: const TextStyle(fontSize: 13.5, color: AppColors.gray900), decoration: _deco(hint)));
+      style: const TextStyle(fontSize: 13.5, color: AppColors.gray900),
+      decoration: _deco(hint).copyWith(
+        prefixIcon: icon != null ? Icon(icon, size: 16, color: AppColors.gray400) : null,
+      )));
 
   Widget _pwInput(String hint) => SizedBox(height: 40,
     child: TextField(

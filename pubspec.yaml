@@ -1,5 +1,5 @@
 name: xboard_client
-description: "Xboard VPN Client - Flutter + sing-box"
+description: "Xboard VPN Client - Flutter + mihomo (Clash.Meta)"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -48,6 +48,31 @@ flutter:
     - assets/images/
     - assets/app_icon.ico
     - assets/app_icon.png
+    # Bundled mihomo (Clash.Meta) kernels. Populated by
+    # scripts/download-kernels.sh before `flutter build`.
+    - assets/bin/windows/
+    - assets/bin/macos/
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-VF.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-VF.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-VF.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-VF.ttf
+          weight: 700
+    - family: NotoSansSC
+      fonts:
+        - asset: assets/fonts/NotoSansSC-VF.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSansSC-VF.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSansSC-VF.ttf
+          weight: 600
+        - asset: assets/fonts/NotoSansSC-VF.ttf
+          weight: 700
 
 msix_config:
   display_name: Xboard

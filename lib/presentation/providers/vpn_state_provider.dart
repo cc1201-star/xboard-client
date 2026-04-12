@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:xboard_client/data/singbox/singbox_service.dart';
+import 'package:xboard_client/data/mihomo/mihomo_service.dart';
 
 enum VpnStatus { disconnected, connecting, connected, disconnecting }
 
@@ -14,8 +14,8 @@ class VpnState {
   final int downloadTotal;
   final Duration connectedDuration;
   final String? errorMessage;
-  final List<SingboxProxy> proxies;
-  final List<SingboxProxyGroup> proxyGroups;
+  final List<MihomoProxy> proxies;
+  final List<MihomoProxyGroup> proxyGroups;
   final List<String> logs;
 
   const VpnState({
@@ -44,8 +44,8 @@ class VpnState {
     int? downloadTotal,
     Duration? connectedDuration,
     String? errorMessage,
-    List<SingboxProxy>? proxies,
-    List<SingboxProxyGroup>? proxyGroups,
+    List<MihomoProxy>? proxies,
+    List<MihomoProxyGroup>? proxyGroups,
     List<String>? logs,
   }) {
     return VpnState(
@@ -65,25 +65,24 @@ class VpnState {
 }
 
 class VpnNotifier extends StateNotifier<VpnState> {
-  final SingboxService _singbox;
-  StreamSubscription<SingboxState>? _stateSub;
+  final MihomoService _mihomo;
+  StreamSubscription<MihomoState>? _stateSub;
   Timer? _durationTimer;
   DateTime? _connectedSince;
 
-  VpnNotifier(this._singbox) : super(const VpnState()) {
-    _stateSub = _singbox.stateStream.listen(_onSingboxState);
+  VpnNotifier(this._mihomo) : super(const VpnState()) {
+    _stateSub = _mihomo.stateStream.listen(_onMihomoState);
   }
 
-  void _onSingboxState(SingboxState s) {
+  void _onMihomoState(MihomoState s) {
     final vpnStatus = switch (s.status) {
-      SingboxStatus.stopped => VpnStatus.disconnected,
-      SingboxStatus.starting => VpnStatus.connecting,
-      SingboxStatus.running => VpnStatus.connected,
-      SingboxStatus.stopping => VpnStatus.disconnecting,
-      SingboxStatus.error => VpnStatus.disconnected,
+      MihomoStatus.stopped => VpnStatus.disconnected,
+      MihomoStatus.starting => VpnStatus.connecting,
+      MihomoStatus.running => VpnStatus.connected,
+      MihomoStatus.stopping => VpnStatus.disconnecting,
+      MihomoStatus.error => VpnStatus.disconnected,
     };
 
-    // Start/stop duration timer
     if (vpnStatus == VpnStatus.connected && _connectedSince == null) {
       _connectedSince = DateTime.now();
       _durationTimer?.cancel();
@@ -113,54 +112,49 @@ class VpnNotifier extends StateNotifier<VpnState> {
     );
   }
 
-  /// Connect using the raw sing-box config from subscription
-  Future<void> connect(String singboxConfig) async {
+  /// Connect using the raw Clash.Meta YAML config from the subscription.
+  Future<void> connect(String mihomoConfig) async {
     if (kIsWeb) {
       state = state.copyWith(
-        errorMessage: 'VPN 功能不支持 Web 平台',
+        errorMessage: 'VPN 功能不支持 Web 平台，请下载桌面或安卓客户端',
       );
       return;
     }
-    await _singbox.start(singboxConfig);
+    await _mihomo.start(mihomoConfig);
   }
 
-  /// Disconnect
   Future<void> disconnect() async {
-    await _singbox.stop();
+    await _mihomo.stop();
   }
 
-  /// Select a proxy node
   Future<void> selectNode(String group, String proxyName) async {
-    await _singbox.selectProxy(group, proxyName);
+    await _mihomo.selectProxy(group, proxyName);
   }
 
-  /// Test proxy latency
   Future<int> testDelay(String proxyName) async {
-    return _singbox.testProxyDelay(proxyName);
+    return _mihomo.testProxyDelay(proxyName);
   }
 
-  /// Refresh proxy list
   Future<void> refreshProxies() async {
-    await _singbox.refreshProxies();
+    await _mihomo.refreshProxies();
   }
 
   @override
   void dispose() {
     _stateSub?.cancel();
     _durationTimer?.cancel();
-    _singbox.dispose();
+    _mihomo.dispose();
     super.dispose();
   }
 }
 
-// Provide the SingboxService as a singleton
-final singboxServiceProvider = Provider<SingboxService>((ref) {
-  final service = SingboxService();
+final mihomoServiceProvider = Provider<MihomoService>((ref) {
+  final service = MihomoService();
   ref.onDispose(() => service.dispose());
   return service;
 });
 
 final vpnStateProvider = StateNotifierProvider<VpnNotifier, VpnState>((ref) {
-  final singbox = ref.watch(singboxServiceProvider);
-  return VpnNotifier(singbox);
+  final mihomo = ref.watch(mihomoServiceProvider);
+  return VpnNotifier(mihomo);
 });

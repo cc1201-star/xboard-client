@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Bundled mihomo kernels (fetched by scripts/download-kernels.sh)
+assets/bin/windows/mihomo.exe
+assets/bin/macos/mihomo-*
+android/app/src/main/jniLibs/*/libmihomo.so

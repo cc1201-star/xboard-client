@@ -25,9 +25,9 @@ class ShellScreen extends ConsumerStatefulWidget {
 class _ShellScreenState extends ConsumerState<ShellScreen> {
   bool _mobileMenuOpen = false;
 
-  // Matching Layout.tsx navItems exactly (9 items, no 日志)
   static const _navItems = [
     _NavDef(icon: Icons.grid_view_rounded, label: '仪表盘', path: '/'),
+    _NavDef(icon: Icons.dns_outlined, label: '节点', path: '/nodes'),
     _NavDef(icon: Icons.bolt, label: '订阅', path: '/subscription'),
     _NavDef(icon: Icons.credit_card_outlined, label: '套餐', path: '/plans'),
     _NavDef(icon: Icons.description_outlined, label: '订单', path: '/orders'),

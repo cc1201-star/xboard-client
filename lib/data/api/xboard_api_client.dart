@@ -369,14 +369,14 @@ class XboardApiClient {
     return _dio.get(ApiEndpoints.serverFetch);
   }
 
-  // ─── Sing-box Config ───
-  Future<Response> fetchSingboxConfig(String subscribeUrl) async {
+  // ─── Mihomo (Clash.Meta) Config ───
+  Future<Response> fetchMihomoConfig(String subscribeUrl) async {
     final plainDio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
     ));
     return plainDio.get(
-      '$subscribeUrl?flag=${AppConstants.singboxFlag}',
+      '$subscribeUrl?flag=${AppConstants.mihomoFlag}',
     );
   }
 }

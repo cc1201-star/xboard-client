@@ -6,26 +6,26 @@ class SubscriptionState {
   final SubscribeInfo? info;
   final bool isLoading;
   final String? error;
-  final String? singboxConfig;
+  final String? mihomoConfig;
 
   const SubscriptionState({
     this.info,
     this.isLoading = false,
     this.error,
-    this.singboxConfig,
+    this.mihomoConfig,
   });
 
   SubscriptionState copyWith({
     SubscribeInfo? info,
     bool? isLoading,
     String? error,
-    String? singboxConfig,
+    String? mihomoConfig,
   }) {
     return SubscriptionState(
       info: info ?? this.info,
       isLoading: isLoading ?? this.isLoading,
       error: error,
-      singboxConfig: singboxConfig ?? this.singboxConfig,
+      mihomoConfig: mihomoConfig ?? this.mihomoConfig,
     );
   }
 }
@@ -52,15 +52,15 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     }
   }
 
-  Future<void> fetchSingboxConfig() async {
+  Future<void> fetchMihomoConfig() async {
     final client = _ref.read(apiClientProvider);
     final subscribeUrl = state.info?.subscribeUrl;
     if (client == null || subscribeUrl == null) return;
 
     try {
-      final response = await client.fetchSingboxConfig(subscribeUrl);
+      final response = await client.fetchMihomoConfig(subscribeUrl);
       final config = response.data is String ? response.data : response.data.toString();
-      state = state.copyWith(singboxConfig: config);
+      state = state.copyWith(mihomoConfig: config);
     } catch (e) {
       state = state.copyWith(error: 'Failed to fetch config');
     }

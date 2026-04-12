@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -33,17 +31,18 @@ class AppColors {
 }
 
 class AppTheme {
-  static String get fontFamily {
-    if (kIsWeb) return 'Microsoft YaHei';
-    if (Platform.isMacOS || Platform.isIOS) return 'PingFang SC';
-    return 'Microsoft YaHei';
-  }
+  // Latin/numerals use Inter (matches the Docker web panel); Chinese glyphs
+  // fall back to Noto Sans SC. Both are bundled variable fonts so every
+  // FontWeight maps to a real glyph — no faux-bold synthesis.
+  static const String fontFamily = 'Inter';
+  static const List<String> fontFamilyFallback = ['NotoSansSC'];
 
   /// Create light theme with dynamic primary color (matching sidebar_color)
   static ThemeData lightThemeWith(Color primary) {
     return ThemeData(
       brightness: Brightness.light,
       fontFamily: fontFamily,
+      fontFamilyFallback: fontFamilyFallback,
       colorScheme: ColorScheme.light(
         primary: primary,
         secondary: primary.withValues(alpha: 0.8),
@@ -66,7 +65,7 @@ class AppTheme {
           backgroundColor: primary, foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily),
+          textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily, fontFamilyFallback: fontFamilyFallback),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -75,7 +74,7 @@ class AppTheme {
           side: BorderSide(color: primary),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily),
+          textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily, fontFamilyFallback: fontFamilyFallback),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -101,6 +100,7 @@ class AppTheme {
     return ThemeData(
       brightness: Brightness.dark,
       fontFamily: fontFamily,
+      fontFamilyFallback: fontFamilyFallback,
       colorScheme: ColorScheme.dark(
         primary: primary,
         secondary: primary.withValues(alpha: 0.8),
@@ -117,7 +117,7 @@ class AppTheme {
           backgroundColor: primary, foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily),
+          textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, fontFamily: fontFamily, fontFamilyFallback: fontFamilyFallback),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

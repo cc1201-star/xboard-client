@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xboard_client/core/theme/app_theme.dart';
 import 'package:xboard_client/core/utils/traffic_formatter.dart';
-import 'package:xboard_client/presentation/providers/auth_provider.dart';
+import 'package:xboard_client/presentation/providers/package_stats_provider.dart';
 import 'package:xboard_client/presentation/providers/subscription_provider.dart';
 import 'package:xboard_client/presentation/providers/user_provider.dart';
 import 'package:xboard_client/presentation/providers/vpn_state_provider.dart';
@@ -18,8 +18,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _copied = false;
-  Map<String, dynamic>? _pkgStats;
-  String _priority = 'plan';
 
   @override
   void initState() {
@@ -27,32 +25,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(subscriptionProvider.notifier).fetchSubscription();
       ref.read(userProvider.notifier).fetchAll();
-      _fetchPackageStats();
+      ref.read(packageStatsProvider.notifier).refresh();
     });
-  }
-
-  Future<void> _fetchPackageStats() async {
-    final client = ref.read(apiClientProvider);
-    if (client == null) return;
-    try {
-      final resp = await client.getPackageStats();
-      final data = resp.data['data'] as Map<String, dynamic>?;
-      if (data != null && mounted) {
-        setState(() {
-          _pkgStats = data;
-          _priority = data['traffic_use_priority'] as String? ?? 'plan';
-        });
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _setTrafficPriority(String p) async {
-    final client = ref.read(apiClientProvider);
-    if (client == null) return;
-    try {
-      await client.setTrafficPriority(p);
-      setState(() => _priority = p);
-    } catch (_) {}
   }
 
   String _formatDate(int? ts) {
@@ -67,6 +41,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final sub = ref.watch(subscriptionProvider);
     final userState = ref.watch(userProvider);
     final vpn = ref.watch(vpnStateProvider);
+    final pkgStats = ref.watch(packageStatsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pc = Theme.of(context).colorScheme.primary;
     final info = sub.info;
@@ -79,15 +54,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final totalUsed = (info?.upload ?? 0) + (info?.download ?? 0);
     final rawTotal = info?.transferEnable ?? user?.transferEnable ?? 0;
-    final pkgTrafficTotal = (_pkgStats?['total_bytes'] as num?)?.toInt() ?? 0;
-    final pkgUsedTotal = (_pkgStats?['used_bytes'] as num?)?.toInt() ?? 0;
+    final pkgTrafficTotal = pkgStats.totalBytes;
+    final pkgUsedTotal = pkgStats.usedBytes;
     final totalTraffic = (rawTotal - pkgTrafficTotal).clamp(0, rawTotal);
     final usedTraffic = (totalUsed - pkgUsedTotal).clamp(0, totalTraffic);
     final pct = totalTraffic > 0 ? (usedTraffic / totalTraffic * 100).clamp(0, 100).toDouble() : 0.0;
     final pkgTotal = pkgTrafficTotal;
     final pkgUsed = pkgUsedTotal;
     final pkgPct = pkgTotal > 0 ? (pkgUsed / pkgTotal * 100).clamp(0, 100).toDouble() : 0.0;
-    final pkgCount = (_pkgStats?['package_count'] as num?)?.toInt() ?? 0;
+    final pkgCount = pkgStats.packageCount;
     final balance = user?.balance ?? 0;
     final stat = userState.stat;
     final expiredAt = user?.expiredAt ?? info?.expiredAt ?? 0;
@@ -235,6 +210,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   // ─── 流量消耗优先级 ───
   Widget _buildTrafficPriority(bool isDark, Color pc) {
+    final priority = ref.watch(packageStatsProvider).priority;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16), decoration: _cardDeco(isDark),
       child: Row(children: [
@@ -247,7 +223,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             color: isDark ? Colors.white : AppColors.gray900)),
           const SizedBox(width: 8),
           Flexible(child: Text(
-            _priority == 'plan' ? '先消耗套餐流量，用完再消耗流量包' : '先消耗流量包，用完再消耗套餐流量',
+            priority == 'plan' ? '先消耗套餐流量，用完再消耗流量包' : '先消耗流量包，用完再消耗套餐流量',
             style: TextStyle(fontSize: 14, color: isDark ? AppColors.gray500 : AppColors.gray400),
             overflow: TextOverflow.ellipsis)),
         ])),
@@ -256,18 +232,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(color: isDark ? AppColors.gray700 : AppColors.gray100, borderRadius: BorderRadius.circular(8)),
           child: Row(children: [
-            _priorityBtn('套餐优先', 'plan', isDark),
-            _priorityBtn('流量包优先', 'package', isDark),
+            _priorityBtn('套餐优先', 'plan', priority, isDark),
+            _priorityBtn('流量包优先', 'package', priority, isDark),
           ]),
         ),
       ]),
     );
   }
 
-  Widget _priorityBtn(String label, String value, bool isDark) {
-    final selected = _priority == value;
+  Widget _priorityBtn(String label, String value, String current, bool isDark) {
+    final selected = current == value;
     return GestureDetector(
-      onTap: () => _setTrafficPriority(value),
+      onTap: () => ref.read(packageStatsProvider.notifier).setPriority(value),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
@@ -363,12 +339,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             if (vpn.isConnected) {
               n.disconnect();
             } else {
-              // Fetch sing-box config, then connect
+              // Fetch mihomo (Clash.Meta) YAML config, then connect
               final subState = ref.read(subscriptionProvider);
-              String? config = subState.singboxConfig;
+              String? config = subState.mihomoConfig;
               if (config == null || config.isEmpty) {
-                await ref.read(subscriptionProvider.notifier).fetchSingboxConfig();
-                config = ref.read(subscriptionProvider).singboxConfig;
+                await ref.read(subscriptionProvider.notifier).fetchMihomoConfig();
+                config = ref.read(subscriptionProvider).mihomoConfig;
               }
               if (config != null && config.isNotEmpty) {
                 n.connect(config);

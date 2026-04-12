@@ -30,10 +30,13 @@ class CustomTitleBar extends ConsumerWidget {
             _TitleBarButton(
               icon: Icons.crop_square,
               onTap: () async {
+                if (await windowManager.isFullScreen()) {
+                  await windowManager.setFullScreen(false);
+                }
                 if (await windowManager.isMaximized()) {
-                  windowManager.unmaximize();
+                  await windowManager.unmaximize();
                 } else {
-                  windowManager.maximize();
+                  await windowManager.maximize();
                 }
               },
               hoverColor: Colors.white.withValues(alpha: 0.1),

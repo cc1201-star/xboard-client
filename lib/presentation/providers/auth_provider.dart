@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:xboard_client/core/constants/app_constants.dart';
 import 'package:xboard_client/data/api/models/auth_response.dart';
 import 'package:xboard_client/data/api/xboard_api_client.dart';
 import 'package:xboard_client/data/api/interceptors/auth_interceptor.dart';
 import 'package:xboard_client/data/local/secure_storage.dart';
+import 'package:xboard_client/data/remote/remote_config_service.dart';
 import 'package:xboard_client/presentation/providers/vpn_state_provider.dart';
 
 final secureStorageProvider = Provider<SecureStorageService>((ref) {
@@ -76,9 +78,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier(this._storage, this._ref) : super(const AuthState());
 
   Future<void> checkAuth() async {
+    // Try fetching the latest server URL from remote config (OSS/CDN).
+    // Falls back to locally cached URL, then to the compile-time default.
+    final remoteConfig = RemoteConfigService();
+    final resolvedUrl = await remoteConfig.getServerUrl(
+      remoteConfigUrl: AppConstants.remoteConfigUrl,
+      defaultUrl: AppConstants.defaultServerUrl,
+    );
+    // Persist so it's available everywhere.
+    await _storage.saveBaseUrl(resolvedUrl);
+
     final hasToken = await _storage.hasAuthToken();
-    final baseUrl = await _storage.getBaseUrl();
-    if (hasToken && baseUrl != null) {
+    final baseUrl = resolvedUrl;
+    if (hasToken) {
       // 有 token，先直接进主页，不等网络验证
       state = state.copyWith(isAuthenticated: true, baseUrl: baseUrl, isInitialized: true);
       // 后台验证 token 是否还有效

@@ -5,6 +5,7 @@ import 'package:xboard_client/presentation/providers/auth_provider.dart';
 import 'package:xboard_client/presentation/screens/login/login_screen.dart';
 import 'package:xboard_client/presentation/screens/home/home_screen.dart';
 import 'package:xboard_client/presentation/screens/subscription/subscription_screen.dart';
+import 'package:xboard_client/presentation/screens/nodes/nodes_screen.dart';
 import 'package:xboard_client/presentation/screens/plans/plans_screen.dart';
 import 'package:xboard_client/presentation/screens/orders/orders_screen.dart';
 import 'package:xboard_client/presentation/screens/traffic_packages/traffic_packages_screen.dart';
@@ -52,16 +53,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => ShellScreen(child: child),
         routes: [
-          GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
-          GoRoute(path: '/subscription', builder: (context, state) => const SubscriptionScreen()),
-          GoRoute(path: '/plans', builder: (context, state) => const PlansScreen()),
-          GoRoute(path: '/orders', builder: (context, state) => const OrdersScreen()),
-          GoRoute(path: '/traffic-packages', builder: (context, state) => const TrafficPackagesScreen()),
-          GoRoute(path: '/recharge', builder: (context, state) => const RechargeScreen()),
-          GoRoute(path: '/tickets', builder: (context, state) => const TicketsScreen()),
-          GoRoute(path: '/notices', builder: (context, state) => const NoticesScreen()),
-          GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
-          GoRoute(path: '/logs', builder: (context, state) => const LogViewerScreen()),
+          GoRoute(path: '/', pageBuilder: (c, s) => const NoTransitionPage(child: HomeScreen())),
+          GoRoute(path: '/subscription', pageBuilder: (c, s) => const NoTransitionPage(child: SubscriptionScreen())),
+          GoRoute(path: '/nodes', pageBuilder: (c, s) => const NoTransitionPage(child: NodesScreen())),
+          GoRoute(path: '/plans', pageBuilder: (c, s) => const NoTransitionPage(child: PlansScreen())),
+          GoRoute(path: '/orders', pageBuilder: (c, s) => const NoTransitionPage(child: OrdersScreen())),
+          GoRoute(path: '/traffic-packages', pageBuilder: (c, s) => const NoTransitionPage(child: TrafficPackagesScreen())),
+          GoRoute(path: '/recharge', pageBuilder: (c, s) => const NoTransitionPage(child: RechargeScreen())),
+          GoRoute(path: '/tickets', pageBuilder: (c, s) => const NoTransitionPage(child: TicketsScreen())),
+          GoRoute(path: '/notices', pageBuilder: (c, s) => const NoTransitionPage(child: NoticesScreen())),
+          GoRoute(path: '/settings', pageBuilder: (c, s) => const NoTransitionPage(child: SettingsScreen())),
+          GoRoute(path: '/logs', pageBuilder: (c, s) => const NoTransitionPage(child: LogViewerScreen())),
         ],
       ),
     ],

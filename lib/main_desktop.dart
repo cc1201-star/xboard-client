@@ -7,15 +7,15 @@ Future<void> initPlatform() async {
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     await windowManager.ensureInitialized();
     const windowOptions = WindowOptions(
-      size: Size(1000, 680),
-      minimumSize: Size(600, 480),
+      size: Size(1100, 750),
+      minimumSize: Size(800, 560),
       center: true,
       title: 'Xboard',
       titleBarStyle: TitleBarStyle.hidden,
       backgroundColor: Colors.transparent,
     );
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      // 拦截窗口关闭，改为隐藏到托盘
+      await windowManager.setFullScreen(false);
       await windowManager.setPreventClose(true);
       await windowManager.show();
       await windowManager.focus();
