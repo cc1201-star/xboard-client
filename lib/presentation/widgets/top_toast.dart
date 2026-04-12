@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 /// Sidebar width used in ShellScreen — keep in sync.
 const _sidebarWidth = 256.0;
 const _mobileBreakpoint = 1024.0;
+/// Match the content area's padding (NodesScreen uses EdgeInsets.all(32)).
+const _contentPadding = 32.0;
 
 /// Show a toast-style message at the top of the **content area** (avoids
-/// overlapping the sidebar).
+/// overlapping the sidebar). Width adapts dynamically to the window size.
 void showTopToast(BuildContext context, String message, {bool isError = false}) {
   final overlay = Overlay.of(context);
   final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -60,14 +62,15 @@ class _TopToastState extends State<_TopToast> with SingleTickerProviderStateMixi
   @override
   Widget build(BuildContext context) {
     final bg = widget.isError ? const Color(0xFFEF4444) : const Color(0xFF22C55E);
+    // Dynamically compute position based on current window size.
     final screenWidth = MediaQuery.of(context).size.width;
     final hasSidebar = screenWidth >= _mobileBreakpoint;
-    final left = (hasSidebar ? _sidebarWidth : 0.0) + 24;
+    final sidebarOffset = hasSidebar ? _sidebarWidth : 0.0;
 
     return Positioned(
       top: MediaQuery.of(context).padding.top + 16,
-      left: left,
-      right: 24,
+      left: sidebarOffset + _contentPadding,
+      right: _contentPadding,
       child: SlideTransition(
         position: _slide,
         child: Material(
