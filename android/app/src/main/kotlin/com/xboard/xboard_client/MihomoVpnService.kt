@@ -191,24 +191,19 @@ class MihomoVpnService : VpnService() {
             this, 0, launch,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, CHANNEL_ID)
-                .setContentTitle("Xboard VPN")
-                .setContentText("已连接")
-                .setSmallIcon(android.R.drawable.stat_sys_vpn_ic)
-                .setContentIntent(pi)
-                .setOngoing(true)
-                .build()
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
-                .setContentTitle("Xboard VPN")
-                .setContentText("已连接")
-                .setSmallIcon(android.R.drawable.stat_sys_vpn_ic)
-                .setContentIntent(pi)
-                .setOngoing(true)
-                .build()
         }
+        return builder
+            .setContentTitle("Xboard VPN")
+            .setContentText("已连接")
+            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setContentIntent(pi)
+            .setOngoing(true)
+            .build()
     }
 
     /**
