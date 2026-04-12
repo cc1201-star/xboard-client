@@ -312,22 +312,24 @@ class MihomoService {
       }
     });
 
-    // Resolve the actually selected leaf proxy node by following the group
-    // chain. e.g. GLOBAL → XBoard → "美国直连". We need the leaf name so it
-    // matches the node card names in the UI.
-    String? selectedNode;
-    for (final g in groups) {
-      if (g.now != null && !groupNames.contains(g.now)) {
-        // This group's `now` points to an actual proxy, not another group.
-        selectedNode = g.now;
-        break;
+    // Resolve selectedNode: if already set by selectProxy(), keep it.
+    // Only compute from the Clash API on initial load (when null).
+    String? selectedNode = _state.selectedNode;
+    if (selectedNode == null) {
+      // Follow the group chain to find the leaf proxy node.
+      // e.g. GLOBAL(now:"XBoard") → XBoard(now:"us|美国-直连") → leaf.
+      for (final g in groups) {
+        if (g.now != null && !groupNames.contains(g.now)) {
+          selectedNode = g.now;
+          break;
+        }
       }
     }
 
     _emit(_state.copyWith(
       proxies: proxies,
       proxyGroups: groups,
-      selectedNode: selectedNode ?? _state.selectedNode,
+      selectedNode: selectedNode,
     ));
   }
 

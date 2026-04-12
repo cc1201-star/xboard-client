@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 
+/// Sidebar width used in ShellScreen — keep in sync.
+const _sidebarWidth = 256.0;
+const _mobileBreakpoint = 1024.0;
+
 /// Show a toast-style message at the top of the **content area** (avoids
-/// overlapping the sidebar). [context] should belong to a widget inside the
-/// content region so its RenderBox gives the correct bounds.
+/// overlapping the sidebar).
 void showTopToast(BuildContext context, String message, {bool isError = false}) {
   final overlay = Overlay.of(context);
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  final box = context.findRenderObject() as RenderBox?;
 
   late OverlayEntry entry;
   entry = OverlayEntry(builder: (ctx) => _TopToast(
     message: message,
     isError: isError,
     isDark: isDark,
-    contentBox: box,
     onDismiss: () => entry.remove(),
   ));
 
@@ -24,10 +25,9 @@ class _TopToast extends StatefulWidget {
   final String message;
   final bool isError;
   final bool isDark;
-  final RenderBox? contentBox;
   final VoidCallback onDismiss;
 
-  const _TopToast({required this.message, required this.isError, required this.isDark, this.contentBox, required this.onDismiss});
+  const _TopToast({required this.message, required this.isError, required this.isDark, required this.onDismiss});
 
   @override
   State<_TopToast> createState() => _TopToastState();
@@ -60,18 +60,14 @@ class _TopToastState extends State<_TopToast> with SingleTickerProviderStateMixi
   @override
   Widget build(BuildContext context) {
     final bg = widget.isError ? const Color(0xFFEF4444) : const Color(0xFF22C55E);
-    // Find the content area RenderBox so the toast stays inside it
-    // (doesn't overlap the sidebar). The context passed to showTopToast
-    // belongs to a widget inside the content area, so its RenderBox gives
-    // us the correct left offset and width.
-    final box = widget.contentBox;
-    final double left = box != null ? box.localToGlobal(Offset.zero).dx + 24 : 24;
-    final double right = box != null
-        ? MediaQuery.of(context).size.width - (box.localToGlobal(Offset.zero).dx + box.size.width) + 24
-        : 24;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final hasSidebar = screenWidth >= _mobileBreakpoint;
+    final left = (hasSidebar ? _sidebarWidth : 0.0) + 24;
+
     return Positioned(
       top: MediaQuery.of(context).padding.top + 16,
-      left: left, right: right,
+      left: left,
+      right: 24,
       child: SlideTransition(
         position: _slide,
         child: Material(
