@@ -359,26 +359,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 }
                 return;
               }
-              // Wait for Clash API ready AND proxy groups loaded.
+              // Wait for Clash API ready.
               for (var i = 0; i < 20; i++) {
                 await Future.delayed(const Duration(milliseconds: 500));
-                if (ref.read(vpnStateProvider).isConnected && n.primaryGroup != null) break;
-                if (ref.read(vpnStateProvider).isConnected) await n.refreshProxies();
+                if (ref.read(vpnStateProvider).isConnected) break;
               }
-              if (!mounted) return;
+              if (!mounted || !ref.read(vpnStateProvider).isConnected) return;
+              // Load proxy groups and auto-select first real proxy node.
+              await n.refreshProxies();
               final group = n.primaryGroup;
-              if (group == null) {
-                showTopToast(context, '连接超时或未找到代理组', isError: true);
-                return;
-              }
-              // Auto-select the first proxy in the primary group and verify
+              if (group == null) return;
               final groupInfo = ref.read(vpnStateProvider).proxyGroups
-                  .where((g) => g.name == group)
-                  .firstOrNull;
+                  .where((g) => g.name == group).firstOrNull;
+              final groupNames = ref.read(vpnStateProvider).proxyGroups
+                  .map((g) => g.name).toSet();
               final realProxies = groupInfo?.all
                   .where((p) => p != 'DIRECT' && p != 'REJECT'
-                      && !ref.read(vpnStateProvider).proxyGroups
-                          .any((g) => g.name == p))
+                      && !groupNames.contains(p))
                   .toList() ?? [];
               if (realProxies.isNotEmpty) {
                 final nodeName = realProxies.first;

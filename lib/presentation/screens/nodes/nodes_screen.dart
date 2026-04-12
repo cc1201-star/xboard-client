@@ -112,8 +112,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         return;
       }
 
-      // Wait for actual connection AND proxy groups to be loaded.
-      bool connected = false;
+      // Wait for Clash API to be ready.
       for (var i = 0; i < 20; i++) {
         await Future.delayed(const Duration(milliseconds: 500));
         final cur = ref.read(vpnStateProvider);
@@ -121,38 +120,32 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
           _toast(cur.errorMessage!, isError: true);
           return;
         }
-        if (cur.isConnected && notifier.primaryGroup != null) {
-          connected = true;
-          break;
-        }
-        // If connected but no proxy groups yet, force a refresh.
-        if (cur.isConnected && notifier.primaryGroup == null) {
-          await notifier.refreshProxies();
-        }
+        if (cur.isConnected) break;
       }
-
-      if (!connected) {
-        final err = ref.read(vpnStateProvider).errorMessage;
-        _toast(err ?? '连接超时', isError: true);
+      if (!ref.read(vpnStateProvider).isConnected) {
+        _toast('连接超时', isError: true);
         return;
       }
 
-      final group = notifier.primaryGroup!;
+      // Explicitly load proxy groups (start() may not have finished this).
+      await notifier.refreshProxies();
 
-      // Find the matching proxy name from Clash API (might differ slightly
-      // from the panel's server list name).
+      final group = notifier.primaryGroup;
+      if (group == null) {
+        _toast('未找到代理组，请检查订阅配置', isError: true);
+        return;
+      }
+
+      // Find the correct proxy name from the Clash API proxy group.
       final vpnState = ref.read(vpnStateProvider);
       final groupInfo = vpnState.proxyGroups
           .where((g) => g.name == group)
           .firstOrNull;
       String proxyName = name;
       if (groupInfo != null && !groupInfo.all.contains(name)) {
-        // Try fuzzy match: panel might add prefixes or the name encoding differs.
         final match = groupInfo.all.where((p) =>
             p.contains(name) || name.contains(p)).firstOrNull;
-        if (match != null) {
-          proxyName = match;
-        }
+        if (match != null) proxyName = match;
       }
 
       final selectErr = await notifier.selectNode(group, proxyName);
@@ -161,7 +154,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         return;
       }
 
-      // Verify the proxy actually works by testing delay.
+      // Verify the proxy actually works.
       final delay = await notifier.testDelay(proxyName);
       if (delay < 0) {
         _toast('已连接到 $name，但代理不通（测速超时），请检查网络或防火墙', isError: true);
