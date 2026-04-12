@@ -112,38 +112,62 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
         return;
       }
 
-      // Wait for actual connection (Clash API verified).
+      // Wait for actual connection AND proxy groups to be loaded.
+      bool connected = false;
       for (var i = 0; i < 20; i++) {
         await Future.delayed(const Duration(milliseconds: 500));
         final cur = ref.read(vpnStateProvider);
-        if (cur.isConnected) {
-          final group = notifier.primaryGroup;
-          if (group == null) {
-            _toast('未找到可用的代理组，请检查订阅配置', isError: true);
-            return;
-          }
-          final selectErr = await notifier.selectNode(group, name);
-          if (selectErr != null) {
-            _toast('切换节点失败: $selectErr', isError: true);
-            return;
-          }
-          // Verify the proxy actually works by testing delay.
-          final delay = await notifier.testDelay(name);
-          if (delay < 0) {
-            _toast('已连接到 $name，但代理不通（测速超时），请检查网络或防火墙', isError: true);
-            return;
-          }
-          _toast('已连接到 $name（${delay}ms）');
-          return;
-        }
         if (cur.errorMessage != null) {
           _toast(cur.errorMessage!, isError: true);
           return;
         }
+        if (cur.isConnected && notifier.primaryGroup != null) {
+          connected = true;
+          break;
+        }
+        // If connected but no proxy groups yet, force a refresh.
+        if (cur.isConnected && notifier.primaryGroup == null) {
+          await notifier.refreshProxies();
+        }
       }
 
-      final err = ref.read(vpnStateProvider).errorMessage;
-      _toast(err ?? '连接超时(等待Clash API 10秒无响应)', isError: true);
+      if (!connected) {
+        final err = ref.read(vpnStateProvider).errorMessage;
+        _toast(err ?? '连接超时', isError: true);
+        return;
+      }
+
+      final group = notifier.primaryGroup!;
+
+      // Find the matching proxy name from Clash API (might differ slightly
+      // from the panel's server list name).
+      final vpnState = ref.read(vpnStateProvider);
+      final groupInfo = vpnState.proxyGroups
+          .where((g) => g.name == group)
+          .firstOrNull;
+      String proxyName = name;
+      if (groupInfo != null && !groupInfo.all.contains(name)) {
+        // Try fuzzy match: panel might add prefixes or the name encoding differs.
+        final match = groupInfo.all.where((p) =>
+            p.contains(name) || name.contains(p)).firstOrNull;
+        if (match != null) {
+          proxyName = match;
+        }
+      }
+
+      final selectErr = await notifier.selectNode(group, proxyName);
+      if (selectErr != null) {
+        _toast('切换节点失败: $selectErr', isError: true);
+        return;
+      }
+
+      // Verify the proxy actually works by testing delay.
+      final delay = await notifier.testDelay(proxyName);
+      if (delay < 0) {
+        _toast('已连接到 $name，但代理不通（测速超时），请检查网络或防火墙', isError: true);
+        return;
+      }
+      _toast('已连接到 $name（${delay}ms）');
     } catch (e) {
       _toast('连接失败: $e', isError: true);
     } finally {

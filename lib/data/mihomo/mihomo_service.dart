@@ -284,9 +284,9 @@ class MihomoService {
       await refreshProxies();
       return null;
     }
-    final groups = _state.proxyGroups.map((g) => g.name).toList();
+    final groups = _state.proxyGroups.map((g) => '${g.name}(${g.all})').toList();
     final errMsg = 'group=$group, proxy=$proxyName, '
-        'error=${result.error}, 可用代理组=$groups';
+        'error=${result.error}, 代理组详情=$groups';
     _onLog('[ERROR] 切换节点失败: $errMsg');
     return errMsg;
   }

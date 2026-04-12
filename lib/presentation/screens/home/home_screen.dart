@@ -359,29 +359,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 }
                 return;
               }
-              // Wait for Clash API ready
+              // Wait for Clash API ready AND proxy groups loaded.
               for (var i = 0; i < 20; i++) {
                 await Future.delayed(const Duration(milliseconds: 500));
-                if (ref.read(vpnStateProvider).isConnected) break;
+                if (ref.read(vpnStateProvider).isConnected && n.primaryGroup != null) break;
+                if (ref.read(vpnStateProvider).isConnected) await n.refreshProxies();
               }
-              if (!ref.read(vpnStateProvider).isConnected) {
-                if (mounted) showTopToast(context, '连接超时', isError: true);
+              if (!mounted) return;
+              final group = n.primaryGroup;
+              if (group == null) {
+                showTopToast(context, '连接超时或未找到代理组', isError: true);
                 return;
               }
-              // Auto-select the first real proxy node and verify
-              final proxies = ref.read(vpnStateProvider).proxies;
-              final group = n.primaryGroup;
-              if (proxies.isNotEmpty && group != null) {
-                final nodeName = proxies.first.name;
-                final selectErr = await n.selectNode(group, nodeName);
-                if (selectErr == null && mounted) {
-                  final delay = await n.testDelay(nodeName);
-                  if (!mounted) return;
-                  if (delay < 0) {
-                    showTopToast(context, '已连接但代理不通，请检查网络或防火墙', isError: true);
-                  } else {
-                    showTopToast(context, '已连接到 $nodeName（${delay}ms）');
-                  }
+              // Auto-select the first proxy in the primary group and verify
+              final groupInfo = ref.read(vpnStateProvider).proxyGroups
+                  .where((g) => g.name == group)
+                  .firstOrNull;
+              final realProxies = groupInfo?.all
+                  .where((p) => p != 'DIRECT' && p != 'REJECT'
+                      && !ref.read(vpnStateProvider).proxyGroups
+                          .any((g) => g.name == p))
+                  .toList() ?? [];
+              if (realProxies.isNotEmpty) {
+                final nodeName = realProxies.first;
+                await n.selectNode(group, nodeName);
+                final delay = await n.testDelay(nodeName);
+                if (!mounted) return;
+                if (delay < 0) {
+                  showTopToast(context, '已连接但代理不通，请检查网络或防火墙', isError: true);
+                } else {
+                  showTopToast(context, '已连接到 $nodeName（${delay}ms）');
                 }
               }
             }
