@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xboard_client/data/mihomo/mihomo_service.dart';
+import 'package:xboard_client/presentation/providers/subscription_provider.dart';
 
 enum VpnStatus { disconnected, connecting, connected, disconnecting }
 
@@ -66,11 +67,17 @@ class VpnState {
 
 class VpnNotifier extends StateNotifier<VpnState> {
   final MihomoService _mihomo;
+  final Ref _ref;
   StreamSubscription<MihomoState>? _stateSub;
   Timer? _durationTimer;
+  Timer? _trafficMonitorTimer;
   DateTime? _connectedSince;
 
-  VpnNotifier(this._mihomo) : super(const VpnState()) {
+  // 连接期间每隔多久拉一次账户剩余流量；服务端 sync 也是周期性的，
+  // 30s 足够及时拦截而不会给 API 造成压力。
+  static const Duration _trafficCheckInterval = Duration(seconds: 30);
+
+  VpnNotifier(this._mihomo, this._ref) : super(const VpnState()) {
     _stateSub = _mihomo.stateStream.listen(_onMihomoState);
   }
 
@@ -93,9 +100,11 @@ class VpnNotifier extends StateNotifier<VpnState> {
           );
         }
       });
+      _startTrafficMonitor();
     } else if (vpnStatus == VpnStatus.disconnected) {
       _connectedSince = null;
       _durationTimer?.cancel();
+      _stopTrafficMonitor();
     }
 
     state = state.copyWith(
@@ -124,7 +133,34 @@ class VpnNotifier extends StateNotifier<VpnState> {
   }
 
   Future<void> disconnect() async {
+    _stopTrafficMonitor();
     await _mihomo.stop();
+  }
+
+  void _startTrafficMonitor() {
+    _trafficMonitorTimer?.cancel();
+    _trafficMonitorTimer = Timer.periodic(_trafficCheckInterval, (_) async {
+      try {
+        final subNotifier = _ref.read(subscriptionProvider.notifier);
+        await subNotifier.fetchSubscription();
+        final info = _ref.read(subscriptionProvider).info;
+        if (info == null) return;
+        if (info.isExpired) {
+          await disconnect();
+          state = state.copyWith(errorMessage: '套餐已到期，已自动断开');
+        } else if (info.remaining <= 0) {
+          await disconnect();
+          state = state.copyWith(errorMessage: '账户流量已耗尽，已自动断开');
+        }
+      } catch (_) {
+        // 网络抖动等失败不强制断开，等下个周期重试
+      }
+    });
+  }
+
+  void _stopTrafficMonitor() {
+    _trafficMonitorTimer?.cancel();
+    _trafficMonitorTimer = null;
   }
 
   /// The primary Selector proxy group name discovered from mihomo runtime.
@@ -156,6 +192,7 @@ class VpnNotifier extends StateNotifier<VpnState> {
   void dispose() {
     _stateSub?.cancel();
     _durationTimer?.cancel();
+    _trafficMonitorTimer?.cancel();
     _mihomo.dispose();
     super.dispose();
   }
@@ -169,5 +206,5 @@ final mihomoServiceProvider = Provider<MihomoService>((ref) {
 
 final vpnStateProvider = StateNotifierProvider<VpnNotifier, VpnState>((ref) {
   final mihomo = ref.watch(mihomoServiceProvider);
-  return VpnNotifier(mihomo);
+  return VpnNotifier(mihomo, ref);
 });

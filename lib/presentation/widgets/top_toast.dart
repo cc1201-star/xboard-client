@@ -84,23 +84,20 @@ class _TopToastState extends State<_TopToast> with SingleTickerProviderStateMixi
         position: _slide,
         child: Material(
           color: Colors.transparent,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: bg.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
-              ),
-              child: Row(children: [
-                Icon(widget.isError ? Icons.error_outline : Icons.check_circle_outline,
-                  color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(child: Text(widget.message,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500))),
-              ]),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [BoxShadow(color: bg.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
             ),
+            child: Row(children: [
+              Icon(widget.isError ? Icons.error_outline : Icons.check_circle_outline,
+                color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(child: Text(widget.message,
+                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500))),
+            ]),
           ),
         ),
       ),

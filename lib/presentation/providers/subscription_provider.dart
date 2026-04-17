@@ -66,6 +66,19 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     }
   }
 
+  /// 启动 VPN / 选择节点前的可用性校验。
+  /// 返回 null 表示可用，否则返回应展示给用户的中文原因。
+  /// remaining 包含套餐 + 全部流量包，所以这里一次性覆盖两类流量耗尽场景。
+  Future<String?> ensureUsable() async {
+    await fetchSubscription();
+    final info = state.info;
+    if (info == null) return '获取订阅信息失败';
+    if (info.isExpired) return '套餐已到期，请先续费';
+    if (info.transferEnable <= 0) return '账户尚未分配流量，请先购买套餐或流量包';
+    if (info.remaining <= 0) return '账户流量已耗尽，请购买流量包或等待重置';
+    return null;
+  }
+
   Future<void> resetSecurity() async {
     final client = _ref.read(apiClientProvider);
     if (client == null) return;

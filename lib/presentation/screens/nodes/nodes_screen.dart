@@ -84,6 +84,12 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
 
     setState(() => _pendingNodeName = name);
     try {
+      // 启动前先校验账户可用性（流量、过期）。
+      final reason = await subNotifier.ensureUsable();
+      if (reason != null) {
+        _toast(reason, isError: true);
+        return;
+      }
       // Always fetch fresh config to pick up server-side changes.
       if (ref.read(subscriptionProvider).info?.subscribeUrl == null) {
         await subNotifier.fetchSubscription();

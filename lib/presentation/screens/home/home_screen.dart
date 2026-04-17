@@ -342,6 +342,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             } else {
               // Ensure subscription info is loaded, then fetch mihomo config.
               final subNotifier = ref.read(subscriptionProvider.notifier);
+              // 启动前先校验账户可用性（流量、过期）。
+              final reason = await subNotifier.ensureUsable();
+              if (reason != null) {
+                if (mounted) showTopToast(context, reason, isError: true);
+                return;
+              }
               if (ref.read(subscriptionProvider).info?.subscribeUrl == null) {
                 await subNotifier.fetchSubscription();
               }
