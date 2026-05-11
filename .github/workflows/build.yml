@@ -48,6 +48,8 @@ jobs:
         with:
           name: xboard-windows-setup
           path: build/installer/Xboard-Setup.exe
+          retention-days: 7
+          if-no-files-found: error
 
   build-macos:
     runs-on: macos-latest
@@ -88,6 +90,8 @@ jobs:
         with:
           name: xboard-macos-dmg
           path: build/macos/Xboard.dmg
+          retention-days: 7
+          if-no-files-found: error
 
   build-android:
     runs-on: ubuntu-latest
@@ -118,6 +122,8 @@ jobs:
         with:
           name: xboard-android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
+          if-no-files-found: error
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
