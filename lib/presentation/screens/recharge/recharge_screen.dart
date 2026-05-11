@@ -17,10 +17,11 @@ class _RechargeScreenState extends ConsumerState<RechargeScreen> {
   int _amountInCents = 0;
   bool _isCustom = false;
   final _customController = TextEditingController();
-  List<dynamic> _paymentMethods = [];
+  static List<dynamic>? _cachedMethods;
+  List<dynamic> _paymentMethods = _cachedMethods ?? const [];
   int? _selectedMethodId;
   bool _submitting = false;
-  bool _loading = true;
+  bool _loading = _cachedMethods == null;
 
   static const _presets = [1000, 5000, 10000, 50000]; // cents
 
@@ -42,15 +43,24 @@ class _RechargeScreenState extends ConsumerState<RechargeScreen> {
   Future<void> _fetchPaymentMethods() async {
     final client = ref.read(apiClientProvider);
     if (client == null) return;
+    if (_cachedMethods == null) setState(() => _loading = true);
+    // 用上一次缓存的方法,先选第一个,避免 spinner 后才有选项
+    if (_cachedMethods != null && _cachedMethods!.isNotEmpty && _selectedMethodId == null) {
+      _selectedMethodId = _cachedMethods![0]['id'] as int?;
+    }
     try {
       final resp = await client.getPaymentMethods();
-      setState(() {
-        _paymentMethods = resp.data['data'] as List? ?? [];
-        if (_paymentMethods.isNotEmpty) _selectedMethodId = _paymentMethods[0]['id'] as int;
+      final data = resp.data['data'] as List? ?? [];
+      _cachedMethods = data;
+      if (mounted) setState(() {
+        _paymentMethods = data;
+        if (_selectedMethodId == null && data.isNotEmpty) {
+          _selectedMethodId = data[0]['id'] as int?;
+        }
         _loading = false;
       });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

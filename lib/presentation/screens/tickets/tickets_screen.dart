@@ -10,8 +10,9 @@ class TicketsScreen extends ConsumerStatefulWidget {
 }
 
 class _TicketsScreenState extends ConsumerState<TicketsScreen> {
-  List<dynamic> _tickets = [];
-  bool _loading = true;
+  static List<dynamic>? _cached;
+  List<dynamic> _tickets = _cached ?? const [];
+  bool _loading = _cached == null;
   bool _showForm = false;
   bool _submitting = false;
   // Form
@@ -43,11 +44,14 @@ class _TicketsScreenState extends ConsumerState<TicketsScreen> {
   Future<void> _fetchTickets() async {
     final client = ref.read(apiClientProvider);
     if (client == null) return;
+    if (_cached == null) setState(() => _loading = true);
     try {
       final resp = await client.getTickets();
-      setState(() { _tickets = resp.data['data'] as List? ?? []; _loading = false; });
+      final data = resp.data['data'] as List? ?? [];
+      _cached = data;
+      if (mounted) setState(() { _tickets = data; _loading = false; });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

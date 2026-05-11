@@ -14,10 +14,12 @@ class TrafficPackagesScreen extends ConsumerStatefulWidget {
 }
 
 class _TrafficPackagesScreenState extends ConsumerState<TrafficPackagesScreen> {
+  static List<dynamic>? _cachedPackages;
+  static List<dynamic>? _cachedMyPackages;
   String _tab = 'buy';
-  List<dynamic> _packages = [];
-  List<dynamic> _myPackages = [];
-  bool _loading = true;
+  List<dynamic> _packages = _cachedPackages ?? const [];
+  List<dynamic> _myPackages = _cachedMyPackages ?? const [];
+  bool _loading = _cachedPackages == null;
   String? _error;
   bool _purchasing = false;
   int? _purchasingId;
@@ -36,16 +38,24 @@ class _TrafficPackagesScreenState extends ConsumerState<TrafficPackagesScreen> {
   Future<void> _fetchAll() async {
     final client = ref.read(apiClientProvider);
     if (client == null) return;
-    setState(() { _loading = true; _error = null; });
+    if (_cachedPackages == null) {
+      setState(() { _loading = true; _error = null; });
+    } else {
+      _error = null;
+    }
     try {
       final results = await Future.wait([client.getTrafficPackages(), client.getMyPackages()]);
-      setState(() {
-        _packages = results[0].data['data'] as List? ?? [];
-        _myPackages = results[1].data['data'] as List? ?? [];
+      final pkgs = results[0].data['data'] as List? ?? [];
+      final my = results[1].data['data'] as List? ?? [];
+      _cachedPackages = pkgs;
+      _cachedMyPackages = my;
+      if (mounted) setState(() {
+        _packages = pkgs;
+        _myPackages = my;
         _loading = false;
       });
     } catch (e) {
-      setState(() { _loading = false; _error = '加载失败'; });
+      if (mounted) setState(() { _loading = false; _error = '加载失败'; });
     }
   }
 

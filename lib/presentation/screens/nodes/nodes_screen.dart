@@ -18,9 +18,10 @@ class NodesScreen extends ConsumerStatefulWidget {
 }
 
 class _NodesScreenState extends ConsumerState<NodesScreen> {
-  bool _loading = true;
+  static List<Map<String, dynamic>>? _cached;
+  bool _loading = _cached == null;
   String? _error;
-  List<Map<String, dynamic>> _nodes = [];
+  List<Map<String, dynamic>> _nodes = _cached ?? const [];
   String? _pendingNodeName;
   // Latency per node name, in milliseconds. -1 means timeout / unreachable.
   final Map<String, int> _delays = {};
@@ -43,20 +44,20 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
   Future<void> _fetch() async {
     final client = ref.read(apiClientProvider);
     if (client == null) return;
-    setState(() {
-      _loading = true;
+    if (_cached == null) {
+      setState(() { _loading = true; _error = null; });
+    } else {
       _error = null;
-    });
+    }
     try {
       final resp = await client.getServerList();
       final raw = resp.data['data'] as List? ?? [];
-      setState(() {
-        _nodes = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _loading = false;
-      });
+      final list = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      _cached = list;
+      if (mounted) setState(() { _nodes = list; _loading = false; });
     } catch (_) {
-      setState(() {
-        _error = '加载节点失败';
+      if (mounted) setState(() {
+        if (_cached == null) _error = '加载节点失败';
         _loading = false;
       });
     }

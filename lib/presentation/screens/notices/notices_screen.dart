@@ -10,8 +10,10 @@ class NoticesScreen extends ConsumerStatefulWidget {
 }
 
 class _NoticesScreenState extends ConsumerState<NoticesScreen> {
-  List<dynamic> _notices = [];
-  bool _loading = true;
+  // 模块级缓存:即使页面销毁重建,数据依旧存在 → 第二次进入立即显示,不闪 spinner
+  static List<dynamic>? _cached;
+  List<dynamic> _notices = _cached ?? const [];
+  bool _loading = _cached == null;
   int? _expandedId;
 
   @override
@@ -23,11 +25,14 @@ class _NoticesScreenState extends ConsumerState<NoticesScreen> {
   Future<void> _fetchNotices() async {
     final client = ref.read(apiClientProvider);
     if (client == null) return;
+    if (_cached == null) setState(() => _loading = true);
     try {
       final resp = await client.getNotices();
-      setState(() { _notices = resp.data['data'] as List? ?? []; _loading = false; });
+      final data = resp.data['data'] as List? ?? [];
+      _cached = data;
+      if (mounted) setState(() { _notices = data; _loading = false; });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

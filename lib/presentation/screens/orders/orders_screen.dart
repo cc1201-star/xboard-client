@@ -13,8 +13,9 @@ class OrdersScreen extends ConsumerStatefulWidget {
 }
 
 class _OrdersScreenState extends ConsumerState<OrdersScreen> {
-  List<dynamic> _orders = [];
-  bool _loading = true;
+  static List<dynamic>? _cached;
+  List<dynamic> _orders = _cached ?? const [];
+  bool _loading = _cached == null;
   Map<String, dynamic>? _payingOrder;
   List<dynamic> _paymentMethods = [];
   int? _selectedMethodId;
@@ -38,11 +39,14 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   Future<void> _fetchOrders() async {
     final client = ref.read(apiClientProvider);
     if (client == null) return;
+    if (_cached == null) setState(() => _loading = true);
     try {
       final resp = await client.getOrders();
-      setState(() { _orders = resp.data['data'] as List? ?? []; _loading = false; });
+      final data = resp.data['data'] as List? ?? [];
+      _cached = data;
+      if (mounted) setState(() { _orders = data; _loading = false; });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

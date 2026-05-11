@@ -216,14 +216,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    // 先停止 VPN 连接和相关定时器
-    try {
-      final vpnNotifier = _ref.read(vpnStateProvider.notifier);
-      await vpnNotifier.disconnect();
-    } catch (_) {}
-    // 清除存储
-    await _storage.clearAll();
+    // 立刻把 UI 切到未登录态 → 用户感受到的"退出"是瞬间的
     state = const AuthState(isInitialized: true);
+    // 余下的清理(停 VPN、清安全存储)放后台跑,不阻塞 UI
+    // ignore: discarded_futures
+    Future.microtask(() async {
+      try {
+        await _ref.read(vpnStateProvider.notifier).disconnect();
+      } catch (_) {}
+      try {
+        await _storage.clearAll();
+      } catch (_) {}
+    });
   }
 }
 

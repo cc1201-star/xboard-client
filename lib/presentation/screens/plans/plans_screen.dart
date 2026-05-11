@@ -13,8 +13,9 @@ class PlansScreen extends ConsumerStatefulWidget {
 }
 
 class _PlansScreenState extends ConsumerState<PlansScreen> {
-  List<dynamic> _plans = [];
-  bool _loading = true;
+  static List<dynamic>? _cached;
+  List<dynamic> _plans = _cached ?? const [];
+  bool _loading = _cached == null;
   Map<String, dynamic>? _selectedPlan;
   String? _selectedPeriod;
   bool _ordering = false;
@@ -39,14 +40,14 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
   Future<void> _fetchPlans() async {
     final client = ref.read(apiClientProvider);
     if (client == null) return;
+    if (_cached == null) setState(() => _loading = true);
     try {
       final resp = await client.getPlans();
-      setState(() {
-        _plans = resp.data['data'] as List? ?? [];
-        _loading = false;
-      });
+      final data = resp.data['data'] as List? ?? [];
+      _cached = data;
+      if (mounted) setState(() { _plans = data; _loading = false; });
     } catch (_) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
