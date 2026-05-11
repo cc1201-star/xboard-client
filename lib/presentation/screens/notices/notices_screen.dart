@@ -1,20 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:xboard_client/core/cache/screen_cache.dart';
 import 'package:xboard_client/core/theme/app_theme.dart';
+import 'package:xboard_client/data/api/xboard_api_client.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
+import 'package:xboard_client/presentation/widgets/skeleton.dart';
 
 class NoticesScreen extends ConsumerStatefulWidget {
   const NoticesScreen({super.key});
+  static Future<void> prefetch(XboardApiClient c) => _NoticesScreenState.prefetch(c);
   @override
   ConsumerState<NoticesScreen> createState() => _NoticesScreenState();
 }
 
 class _NoticesScreenState extends ConsumerState<NoticesScreen> {
-  // 模块级缓存:即使页面销毁重建,数据依旧存在 → 第二次进入立即显示,不闪 spinner
-  static List<dynamic>? _cached;
+  // 内存 + 磁盘双层缓存:首屏可能从磁盘秒读上次,后台再静默刷新
+  static List<dynamic>? _cached = ScreenCache.readList('notices');
   List<dynamic> _notices = _cached ?? const [];
   bool _loading = _cached == null;
   int? _expandedId;
+
+  /// 给 hover prefetch 用 — 不打开页面也能预热数据
+  static Future<void> prefetch(XboardApiClient client) async {
+    try {
+      final resp = await client.getNotices();
+      final data = resp.data['data'] as List? ?? [];
+      _cached = data;
+      await ScreenCache.writeList('notices', data);
+    } catch (_) {}
+  }
 
   @override
   void initState() {
@@ -30,6 +44,7 @@ class _NoticesScreenState extends ConsumerState<NoticesScreen> {
       final resp = await client.getNotices();
       final data = resp.data['data'] as List? ?? [];
       _cached = data;
+      ScreenCache.writeList('notices', data);
       if (mounted) setState(() { _notices = data; _loading = false; });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
@@ -52,8 +67,7 @@ class _NoticesScreenState extends ConsumerState<NoticesScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_loading) {
-      return Center(child: SizedBox(width: 32, height: 32,
-        child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary)));
+      return const TableRowsSkeleton(rows: 5);
     }
 
     return SingleChildScrollView(

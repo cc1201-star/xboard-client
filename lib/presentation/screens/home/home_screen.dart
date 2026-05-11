@@ -9,6 +9,7 @@ import 'package:xboard_client/presentation/providers/package_stats_provider.dart
 import 'package:xboard_client/presentation/providers/subscription_provider.dart';
 import 'package:xboard_client/presentation/providers/user_provider.dart';
 import 'package:xboard_client/presentation/providers/vpn_state_provider.dart';
+import 'package:xboard_client/presentation/widgets/skeleton.dart';
 import 'package:xboard_client/presentation/widgets/top_toast.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -49,8 +50,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final user = userState.user;
 
     if (sub.isLoading && info == null) {
-      return Center(child: SizedBox(width: 32, height: 32,
-        child: CircularProgressIndicator(strokeWidth: 2, color: pc)));
+      return const HomeSkeleton();
     }
 
     final totalUsed = (info?.upload ?? 0) + (info?.download ?? 0);

@@ -2,13 +2,17 @@ import 'package:xboard_client/presentation/widgets/top_toast.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:xboard_client/core/cache/screen_cache.dart';
 import 'package:xboard_client/core/theme/app_theme.dart';
+import 'package:xboard_client/data/api/xboard_api_client.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
 import 'package:xboard_client/presentation/providers/user_provider.dart';
+import 'package:xboard_client/presentation/widgets/skeleton.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class RechargeScreen extends ConsumerStatefulWidget {
   const RechargeScreen({super.key});
+  static Future<void> prefetch(XboardApiClient c) => _RechargeScreenState.prefetch(c);
   @override
   ConsumerState<RechargeScreen> createState() => _RechargeScreenState();
 }
@@ -17,11 +21,20 @@ class _RechargeScreenState extends ConsumerState<RechargeScreen> {
   int _amountInCents = 0;
   bool _isCustom = false;
   final _customController = TextEditingController();
-  static List<dynamic>? _cachedMethods;
+  static List<dynamic>? _cachedMethods = ScreenCache.readList('payment_methods');
   List<dynamic> _paymentMethods = _cachedMethods ?? const [];
   int? _selectedMethodId;
   bool _submitting = false;
   bool _loading = _cachedMethods == null;
+
+  static Future<void> prefetch(XboardApiClient client) async {
+    try {
+      final resp = await client.getPaymentMethods();
+      final data = resp.data['data'] as List? ?? [];
+      _cachedMethods = data;
+      await ScreenCache.writeList('payment_methods', data);
+    } catch (_) {}
+  }
 
   static const _presets = [1000, 5000, 10000, 50000]; // cents
 
@@ -52,6 +65,7 @@ class _RechargeScreenState extends ConsumerState<RechargeScreen> {
       final resp = await client.getPaymentMethods();
       final data = resp.data['data'] as List? ?? [];
       _cachedMethods = data;
+      ScreenCache.writeList('payment_methods', data);
       if (mounted) setState(() {
         _paymentMethods = data;
         if (_selectedMethodId == null && data.isNotEmpty) {

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:xboard_client/core/cache/screen_cache.dart';
 import 'package:xboard_client/core/theme/app_theme.dart';
 import 'package:xboard_client/core/router/app_router.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
@@ -10,6 +11,7 @@ import 'package:xboard_client/main_desktop.dart' if (dart.library.html) 'package
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ScreenCache.init();
   await platform.initPlatform();
   runApp(const ProviderScope(child: XboardApp()));
 }

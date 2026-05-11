@@ -1,10 +1,13 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:xboard_client/core/cache/screen_cache.dart';
 import 'package:xboard_client/core/theme/app_theme.dart';
+import 'package:xboard_client/data/api/xboard_api_client.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
 import 'package:xboard_client/presentation/providers/subscription_provider.dart';
 import 'package:xboard_client/presentation/providers/vpn_state_provider.dart';
+import 'package:xboard_client/presentation/widgets/skeleton.dart';
 import 'package:xboard_client/presentation/widgets/top_toast.dart';
 
 // The primary proxy group name is discovered dynamically from mihomo runtime
@@ -13,15 +16,28 @@ import 'package:xboard_client/presentation/widgets/top_toast.dart';
 class NodesScreen extends ConsumerStatefulWidget {
   const NodesScreen({super.key});
 
+  static Future<void> prefetch(XboardApiClient c) => _NodesScreenState.prefetch(c);
+
   @override
   ConsumerState<NodesScreen> createState() => _NodesScreenState();
 }
 
 class _NodesScreenState extends ConsumerState<NodesScreen> {
-  static List<Map<String, dynamic>>? _cached;
+  static List<Map<String, dynamic>>? _cached =
+      ScreenCache.readList('nodes')?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   bool _loading = _cached == null;
   String? _error;
   List<Map<String, dynamic>> _nodes = _cached ?? const [];
+
+  static Future<void> prefetch(XboardApiClient client) async {
+    try {
+      final resp = await client.getServerList();
+      final raw = resp.data['data'] as List? ?? [];
+      final list = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      _cached = list;
+      await ScreenCache.writeList('nodes', list);
+    } catch (_) {}
+  }
   String? _pendingNodeName;
   // Latency per node name, in milliseconds. -1 means timeout / unreachable.
   final Map<String, int> _delays = {};
@@ -54,6 +70,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
       final raw = resp.data['data'] as List? ?? [];
       final list = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       _cached = list;
+      ScreenCache.writeList('nodes', list);
       if (mounted) setState(() { _nodes = list; _loading = false; });
     } catch (_) {
       if (mounted) setState(() {
@@ -318,16 +335,7 @@ class _NodesScreenState extends ConsumerState<NodesScreen> {
           ),
           const SizedBox(height: 24),
           if (_loading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
-                child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            )
+            const SizedBox(height: 540, child: NodesSkeleton())
           else if (_error != null)
             _buildEmpty(
               isDark,

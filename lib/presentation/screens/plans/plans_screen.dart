@@ -2,20 +2,33 @@ import 'package:xboard_client/presentation/widgets/top_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:xboard_client/core/cache/screen_cache.dart';
 import 'package:xboard_client/core/theme/app_theme.dart';
+import 'package:xboard_client/data/api/xboard_api_client.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
 import 'package:xboard_client/presentation/providers/user_provider.dart';
+import 'package:xboard_client/presentation/widgets/skeleton.dart';
 
 class PlansScreen extends ConsumerStatefulWidget {
   const PlansScreen({super.key});
+  static Future<void> prefetch(XboardApiClient c) => _PlansScreenState.prefetch(c);
   @override
   ConsumerState<PlansScreen> createState() => _PlansScreenState();
 }
 
 class _PlansScreenState extends ConsumerState<PlansScreen> {
-  static List<dynamic>? _cached;
+  static List<dynamic>? _cached = ScreenCache.readList('plans');
   List<dynamic> _plans = _cached ?? const [];
   bool _loading = _cached == null;
+
+  static Future<void> prefetch(XboardApiClient client) async {
+    try {
+      final resp = await client.getPlans();
+      final data = resp.data['data'] as List? ?? [];
+      _cached = data;
+      await ScreenCache.writeList('plans', data);
+    } catch (_) {}
+  }
   Map<String, dynamic>? _selectedPlan;
   String? _selectedPeriod;
   bool _ordering = false;
@@ -45,6 +58,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
       final resp = await client.getPlans();
       final data = resp.data['data'] as List? ?? [];
       _cached = data;
+      ScreenCache.writeList('plans', data);
       if (mounted) setState(() { _plans = data; _loading = false; });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
@@ -88,8 +102,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     final user = ref.watch(userProvider).user;
 
     if (_loading) {
-      return Center(child: SizedBox(width: 32, height: 32,
-        child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary)));
+      return const PlanCardsSkeleton();
     }
 
     return Stack(children: [

@@ -1,18 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:xboard_client/core/cache/screen_cache.dart';
 import 'package:xboard_client/core/theme/app_theme.dart';
+import 'package:xboard_client/data/api/xboard_api_client.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
+import 'package:xboard_client/presentation/widgets/skeleton.dart';
 
 class TicketsScreen extends ConsumerStatefulWidget {
   const TicketsScreen({super.key});
+  static Future<void> prefetch(XboardApiClient c) => _TicketsScreenState.prefetch(c);
   @override
   ConsumerState<TicketsScreen> createState() => _TicketsScreenState();
 }
 
 class _TicketsScreenState extends ConsumerState<TicketsScreen> {
-  static List<dynamic>? _cached;
+  static List<dynamic>? _cached = ScreenCache.readList('tickets');
   List<dynamic> _tickets = _cached ?? const [];
   bool _loading = _cached == null;
+
+  static Future<void> prefetch(XboardApiClient client) async {
+    try {
+      final resp = await client.getTickets();
+      final data = resp.data['data'] as List? ?? [];
+      _cached = data;
+      await ScreenCache.writeList('tickets', data);
+    } catch (_) {}
+  }
   bool _showForm = false;
   bool _submitting = false;
   // Form
@@ -49,6 +62,7 @@ class _TicketsScreenState extends ConsumerState<TicketsScreen> {
       final resp = await client.getTickets();
       final data = resp.data['data'] as List? ?? [];
       _cached = data;
+      ScreenCache.writeList('tickets', data);
       if (mounted) setState(() { _tickets = data; _loading = false; });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
@@ -145,8 +159,7 @@ class _TicketsScreenState extends ConsumerState<TicketsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_loading) {
-      return Center(child: SizedBox(width: 32, height: 32,
-        child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary)));
+      return const TableRowsSkeleton(rows: 5);
     }
 
     // Detail view

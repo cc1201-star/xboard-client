@@ -2,25 +2,41 @@ import 'package:xboard_client/presentation/widgets/top_toast.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:xboard_client/core/cache/screen_cache.dart';
 import 'package:xboard_client/core/theme/app_theme.dart';
 import 'package:xboard_client/core/utils/traffic_formatter.dart';
+import 'package:xboard_client/data/api/xboard_api_client.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
+import 'package:xboard_client/presentation/widgets/skeleton.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class TrafficPackagesScreen extends ConsumerStatefulWidget {
   const TrafficPackagesScreen({super.key});
+  static Future<void> prefetch(XboardApiClient c) => _TrafficPackagesScreenState.prefetch(c);
   @override
   ConsumerState<TrafficPackagesScreen> createState() => _TrafficPackagesScreenState();
 }
 
 class _TrafficPackagesScreenState extends ConsumerState<TrafficPackagesScreen> {
-  static List<dynamic>? _cachedPackages;
-  static List<dynamic>? _cachedMyPackages;
+  static List<dynamic>? _cachedPackages = ScreenCache.readList('traffic_packages');
+  static List<dynamic>? _cachedMyPackages = ScreenCache.readList('my_traffic_packages');
   String _tab = 'buy';
   List<dynamic> _packages = _cachedPackages ?? const [];
   List<dynamic> _myPackages = _cachedMyPackages ?? const [];
   bool _loading = _cachedPackages == null;
   String? _error;
+
+  static Future<void> prefetch(XboardApiClient client) async {
+    try {
+      final results = await Future.wait([client.getTrafficPackages(), client.getMyPackages()]);
+      final pkgs = results[0].data['data'] as List? ?? [];
+      final my = results[1].data['data'] as List? ?? [];
+      _cachedPackages = pkgs;
+      _cachedMyPackages = my;
+      await ScreenCache.writeList('traffic_packages', pkgs);
+      await ScreenCache.writeList('my_traffic_packages', my);
+    } catch (_) {}
+  }
   bool _purchasing = false;
   int? _purchasingId;
   // Payment modal
@@ -49,6 +65,8 @@ class _TrafficPackagesScreenState extends ConsumerState<TrafficPackagesScreen> {
       final my = results[1].data['data'] as List? ?? [];
       _cachedPackages = pkgs;
       _cachedMyPackages = my;
+      ScreenCache.writeList('traffic_packages', pkgs);
+      ScreenCache.writeList('my_traffic_packages', my);
       if (mounted) setState(() {
         _packages = pkgs;
         _myPackages = my;
@@ -154,8 +172,7 @@ class _TrafficPackagesScreenState extends ConsumerState<TrafficPackagesScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_loading) {
-      return Center(child: SizedBox(width: 32, height: 32,
-        child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary)));
+      return const PlanCardsSkeleton();
     }
 
     return Stack(children: [

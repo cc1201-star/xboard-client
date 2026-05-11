@@ -31,6 +31,8 @@ dependencies:
   window_manager: ^0.4.3
   # System tray
   tray_manager: ^0.2.3
+  # Loading skeletons
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

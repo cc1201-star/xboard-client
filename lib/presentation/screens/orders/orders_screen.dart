@@ -2,20 +2,33 @@ import 'package:xboard_client/presentation/widgets/top_toast.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:xboard_client/core/cache/screen_cache.dart';
 import 'package:xboard_client/core/theme/app_theme.dart';
+import 'package:xboard_client/data/api/xboard_api_client.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
+import 'package:xboard_client/presentation/widgets/skeleton.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
+  static Future<void> prefetch(XboardApiClient c) => _OrdersScreenState.prefetch(c);
   @override
   ConsumerState<OrdersScreen> createState() => _OrdersScreenState();
 }
 
 class _OrdersScreenState extends ConsumerState<OrdersScreen> {
-  static List<dynamic>? _cached;
+  static List<dynamic>? _cached = ScreenCache.readList('orders');
   List<dynamic> _orders = _cached ?? const [];
   bool _loading = _cached == null;
+
+  static Future<void> prefetch(XboardApiClient client) async {
+    try {
+      final resp = await client.getOrders();
+      final data = resp.data['data'] as List? ?? [];
+      _cached = data;
+      await ScreenCache.writeList('orders', data);
+    } catch (_) {}
+  }
   Map<String, dynamic>? _payingOrder;
   List<dynamic> _paymentMethods = [];
   int? _selectedMethodId;
@@ -44,6 +57,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       final resp = await client.getOrders();
       final data = resp.data['data'] as List? ?? [];
       _cached = data;
+      ScreenCache.writeList('orders', data);
       if (mounted) setState(() { _orders = data; _loading = false; });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
@@ -147,8 +161,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final pc = Theme.of(context).colorScheme.primary;
 
     if (_loading) {
-      return Center(child: SizedBox(width: 32, height: 32,
-        child: CircularProgressIndicator(strokeWidth: 2, color: pc)));
+      return const TableRowsSkeleton(rows: 5);
     }
 
     return Stack(children: [

@@ -8,6 +8,13 @@ import 'package:xboard_client/presentation/providers/package_stats_provider.dart
 import 'package:xboard_client/presentation/providers/subscription_provider.dart';
 import 'package:xboard_client/presentation/providers/theme_provider.dart';
 import 'package:xboard_client/presentation/providers/user_provider.dart';
+import 'package:xboard_client/presentation/screens/nodes/nodes_screen.dart';
+import 'package:xboard_client/presentation/screens/notices/notices_screen.dart';
+import 'package:xboard_client/presentation/screens/orders/orders_screen.dart';
+import 'package:xboard_client/presentation/screens/plans/plans_screen.dart';
+import 'package:xboard_client/presentation/screens/recharge/recharge_screen.dart';
+import 'package:xboard_client/presentation/screens/tickets/tickets_screen.dart';
+import 'package:xboard_client/presentation/screens/traffic_packages/traffic_packages_screen.dart';
 import 'package:xboard_client/presentation/widgets/custom_title_bar.dart';
 
 bool get _isDesktop {
@@ -45,19 +52,44 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
   Color get _sidebarColor => ref.watch(themeColorProvider);
 
   /// 鼠标 hover 菜单项时,提前调起目标页所需数据
-  /// 等用户真点击的时候,数据已经在 provider 缓存里,直接渲染,无 spinner
+  /// 等用户真点击的时候,数据已经在缓存里,直接渲染,无 spinner
   void _prefetchForPath(String path) {
+    final client = ref.read(apiClientProvider);
     switch (path) {
       case '/':
+        ref.read(userProvider.notifier).fetchAll();
+        ref.read(subscriptionProvider.notifier).fetchSubscription();
+        ref.read(packageStatsProvider.notifier).refresh();
+        break;
       case '/settings':
         ref.read(userProvider.notifier).fetchUser();
         break;
       case '/subscription':
+        ref.read(subscriptionProvider.notifier).fetchSubscription();
+        break;
       case '/nodes':
         ref.read(subscriptionProvider.notifier).fetchSubscription();
+        if (client != null) NodesScreen.prefetch(client);
+        break;
+      case '/plans':
+        if (client != null) PlansScreen.prefetch(client);
+        break;
+      case '/orders':
+        if (client != null) OrdersScreen.prefetch(client);
         break;
       case '/traffic-packages':
         ref.read(packageStatsProvider.notifier).refresh();
+        if (client != null) TrafficPackagesScreen.prefetch(client);
+        break;
+      case '/recharge':
+        ref.read(userProvider.notifier).fetchUser();
+        if (client != null) RechargeScreen.prefetch(client);
+        break;
+      case '/tickets':
+        if (client != null) TicketsScreen.prefetch(client);
+        break;
+      case '/notices':
+        if (client != null) NoticesScreen.prefetch(client);
         break;
     }
   }
