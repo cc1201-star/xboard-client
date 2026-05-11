@@ -39,7 +39,10 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     final client = _ref.read(apiClientProvider);
     if (client == null) return;
 
-    state = state.copyWith(isLoading: true, error: null);
+    // 只有首次拉(无任何数据)才显示 spinner;有缓存时静默刷新,不闪屏
+    if (state.info == null) {
+      state = state.copyWith(isLoading: true, error: null);
+    }
 
     try {
       final response = await client.getSubscribe();

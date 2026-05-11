@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:xboard_client/core/theme/app_theme.dart';
 import 'package:xboard_client/presentation/providers/auth_provider.dart';
+import 'package:xboard_client/presentation/providers/package_stats_provider.dart';
+import 'package:xboard_client/presentation/providers/subscription_provider.dart';
 import 'package:xboard_client/presentation/providers/theme_provider.dart';
+import 'package:xboard_client/presentation/providers/user_provider.dart';
 import 'package:xboard_client/presentation/widgets/custom_title_bar.dart';
 
 bool get _isDesktop {
@@ -40,6 +43,24 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
 
   bool _colorLoaded = false;
   Color get _sidebarColor => ref.watch(themeColorProvider);
+
+  /// 鼠标 hover 菜单项时,提前调起目标页所需数据
+  /// 等用户真点击的时候,数据已经在 provider 缓存里,直接渲染,无 spinner
+  void _prefetchForPath(String path) {
+    switch (path) {
+      case '/':
+      case '/settings':
+        ref.read(userProvider.notifier).fetchUser();
+        break;
+      case '/subscription':
+      case '/nodes':
+        ref.read(subscriptionProvider.notifier).fetchSubscription();
+        break;
+      case '/traffic-packages':
+        ref.read(packageStatsProvider.notifier).refresh();
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -136,6 +157,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                 icon: item.icon,
                 label: item.label,
                 selected: location == item.path,
+                onHover: () => _prefetchForPath(item.path),
                 onTap: () {
                   context.go(item.path);
                   setState(() => _mobileMenuOpen = false);
@@ -200,7 +222,14 @@ class _NavTile extends StatefulWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _NavTile({required this.icon, required this.label, required this.selected, required this.onTap});
+  final VoidCallback? onHover;
+  const _NavTile({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.onHover,
+  });
 
   @override
   State<_NavTile> createState() => _NavTileState();
@@ -214,7 +243,10 @@ class _NavTileState extends State<_NavTile> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
+        onEnter: (_) {
+          setState(() => _hover = true);
+          widget.onHover?.call();
+        },
         onExit: (_) => setState(() => _hover = false),
         child: GestureDetector(
           onTap: widget.onTap,

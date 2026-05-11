@@ -53,22 +53,42 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => ShellScreen(child: child),
         routes: [
-          GoRoute(path: '/', pageBuilder: (c, s) => const NoTransitionPage(child: HomeScreen())),
-          GoRoute(path: '/subscription', pageBuilder: (c, s) => const NoTransitionPage(child: SubscriptionScreen())),
-          GoRoute(path: '/nodes', pageBuilder: (c, s) => const NoTransitionPage(child: NodesScreen())),
-          GoRoute(path: '/plans', pageBuilder: (c, s) => const NoTransitionPage(child: PlansScreen())),
-          GoRoute(path: '/orders', pageBuilder: (c, s) => const NoTransitionPage(child: OrdersScreen())),
-          GoRoute(path: '/traffic-packages', pageBuilder: (c, s) => const NoTransitionPage(child: TrafficPackagesScreen())),
-          GoRoute(path: '/recharge', pageBuilder: (c, s) => const NoTransitionPage(child: RechargeScreen())),
-          GoRoute(path: '/tickets', pageBuilder: (c, s) => const NoTransitionPage(child: TicketsScreen())),
-          GoRoute(path: '/notices', pageBuilder: (c, s) => const NoTransitionPage(child: NoticesScreen())),
-          GoRoute(path: '/settings', pageBuilder: (c, s) => const NoTransitionPage(child: SettingsScreen())),
-          GoRoute(path: '/logs', pageBuilder: (c, s) => const NoTransitionPage(child: LogViewerScreen())),
+          GoRoute(path: '/', pageBuilder: (c, s) => _fadeUp(const HomeScreen())),
+          GoRoute(path: '/subscription', pageBuilder: (c, s) => _fadeUp(const SubscriptionScreen())),
+          GoRoute(path: '/nodes', pageBuilder: (c, s) => _fadeUp(const NodesScreen())),
+          GoRoute(path: '/plans', pageBuilder: (c, s) => _fadeUp(const PlansScreen())),
+          GoRoute(path: '/orders', pageBuilder: (c, s) => _fadeUp(const OrdersScreen())),
+          GoRoute(path: '/traffic-packages', pageBuilder: (c, s) => _fadeUp(const TrafficPackagesScreen())),
+          GoRoute(path: '/recharge', pageBuilder: (c, s) => _fadeUp(const RechargeScreen())),
+          GoRoute(path: '/tickets', pageBuilder: (c, s) => _fadeUp(const TicketsScreen())),
+          GoRoute(path: '/notices', pageBuilder: (c, s) => _fadeUp(const NoticesScreen())),
+          GoRoute(path: '/settings', pageBuilder: (c, s) => _fadeUp(const SettingsScreen())),
+          GoRoute(path: '/logs', pageBuilder: (c, s) => _fadeUp(const LogViewerScreen())),
         ],
       ),
     ],
   );
 });
+
+/// Shell 内菜单切换的过渡:220ms 淡入 + 8px 上滑,曲线 easeOutCubic
+/// 与 C.API 网页的风格保持一致,体感"丝滑"
+CustomTransitionPage<void> _fadeUp(Widget child) {
+  return CustomTransitionPage<void>(
+    child: child,
+    transitionDuration: const Duration(milliseconds: 220),
+    reverseTransitionDuration: const Duration(milliseconds: 160),
+    transitionsBuilder: (context, animation, _, c) {
+      final curve = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      return FadeTransition(
+        opacity: curve,
+        child: SlideTransition(
+          position: Tween(begin: const Offset(0, 0.012), end: Offset.zero).animate(curve),
+          child: c,
+        ),
+      );
+    },
+  );
+}
 
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();

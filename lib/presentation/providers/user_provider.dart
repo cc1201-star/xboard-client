@@ -29,7 +29,9 @@ class UserNotifier extends StateNotifier<UserState> {
     final client = _ref.read(apiClientProvider);
     if (client == null) return;
 
-    state = state.copyWith(isLoading: true, error: null);
+    if (state.user == null) {
+      state = state.copyWith(isLoading: true, error: null);
+    }
     try {
       final response = await client.getUserInfo();
       final data = response.data['data'] as Map<String, dynamic>;
